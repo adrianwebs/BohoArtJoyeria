@@ -160,11 +160,6 @@ export function Footer() {
                   Contacto & Pedidos Personalizados
                 </Link>
               </li>
-              <li>
-                <Link href="/login" className="hover:text-boho-terracotta transition-colors text-boho-terracotta font-medium">
-                  Área de Administración
-                </Link>
-              </li>
             </ul>
           </div>
 

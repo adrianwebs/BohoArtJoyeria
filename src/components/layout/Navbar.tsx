@@ -125,14 +125,6 @@ export function Navbar({ categories = [] }: NavbarProps) {
               <Search className="w-4 h-4 text-boho-charcoal-muted absolute left-3 pointer-events-none" />
             </form>
 
-            <Link
-              href="/login"
-              className="p-2 text-boho-charcoal hover:text-boho-terracotta active:scale-90 transition-all rounded-full hover:bg-boho-sand-100"
-              title="Acceso Administración / Cuenta"
-            >
-              <User className="w-5 h-5" />
-            </Link>
-
             {/* Cart Button */}
             <button
               onClick={openCart}

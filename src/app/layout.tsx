@@ -1,11 +1,8 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { CartProvider } from '@/lib/cartContext';
-import { CartDrawer } from '@/components/layout/CartDrawer';
-import { AnnouncementBar } from '@/components/layout/AnnouncementBar';
-import { Navbar } from '@/components/layout/Navbar';
-import { Footer } from '@/components/layout/Footer';
 import { Preloader } from '@/components/ui/Preloader';
+import { StoreLayoutWrapper } from '@/components/layout/StoreLayoutWrapper';
 import { storeService } from '@/lib/storeService';
 
 export const metadata: Metadata = {
@@ -76,18 +73,13 @@ export default async function RootLayout({
       <body className="min-h-screen flex flex-col font-sans bg-boho-linen text-boho-charcoal selection:bg-boho-terracotta selection:text-white">
         <Preloader />
         <CartProvider>
-          <AnnouncementBar
-            text={settings.announcementText}
+          <StoreLayoutWrapper
+            announcementText={settings.announcementText}
             instagramUrl={settings.instagramUrl}
-          />
-          <Navbar categories={categories} />
-          
-          <main className="flex-1">
+            categories={categories}
+          >
             {children}
-          </main>
-
-          <Footer />
-          <CartDrawer />
+          </StoreLayoutWrapper>
         </CartProvider>
       </body>
     </html>
