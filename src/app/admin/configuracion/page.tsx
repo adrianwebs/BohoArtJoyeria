@@ -21,6 +21,7 @@ export default function AdminSettingsPage() {
 
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [currentIp, setCurrentIp] = useState('');
 
   useEffect(() => {
     fetch('/api/settings')
@@ -40,6 +41,13 @@ export default function AdminSettingsPage() {
       })
       .catch((e) => console.error(e))
       .finally(() => setLoading(false));
+
+    fetch('/api/my-ip')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.ip) setCurrentIp(data.ip);
+      })
+      .catch((e) => console.error(e));
   }, []);
 
   const handleSave = async (e: React.FormEvent) => {
@@ -140,6 +148,28 @@ export default function AdminSettingsPage() {
             </label>
           </div>
 
+          {/* Current IP Detector Widget */}
+          <div className="p-3 bg-boho-sand-100 rounded-xl border border-boho-sand-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+            <div>
+              <span className="text-boho-charcoal-muted font-medium">🌐 Tu IP actual detectada por el servidor:</span>{' '}
+              <strong className="font-mono text-boho-charcoal font-bold">{currentIp || 'Detectando...'}</strong>
+            </div>
+            {currentIp && (
+              <button
+                type="button"
+                onClick={() => {
+                  const ips = maintenanceAllowedIps.split(',').map((s) => s.trim()).filter(Boolean);
+                  if (!ips.includes(currentIp)) {
+                    setMaintenanceAllowedIps(ips.concat(currentIp).join(', '));
+                  }
+                }}
+                className="px-3 py-1 bg-white hover:bg-boho-sand-50 border border-boho-sand-300 rounded-lg text-[11px] font-semibold text-boho-terracotta transition-colors shadow-2xs self-start sm:self-auto"
+              >
+                + Añadir mi IP a la lista
+              </button>
+            )}
+          </div>
+
           {/* Allowed IPs input */}
           <div className="space-y-2">
             <label className="block text-xs font-semibold text-boho-charcoal">
@@ -149,11 +179,11 @@ export default function AdminSettingsPage() {
               type="text"
               value={maintenanceAllowedIps}
               onChange={(e) => setMaintenanceAllowedIps(e.target.value)}
-              placeholder="Ej: 127.0.0.1, 88.12.34.56, 192.168.1.100"
+              placeholder="Ej: 127.0.0.1, 88.12.34.56"
               className="w-full px-3.5 py-2.5 text-xs bg-white border border-boho-sand-300 rounded-xl focus:outline-none focus:border-boho-terracotta font-mono"
             />
             <span className="text-[11px] text-boho-charcoal-muted block">
-              💡 Introduce tu IP pública para que puedas seguir probando y navegando por la web. <code>127.0.0.1, ::1</code> permite el acceso local. También puedes definir <code>MAINTENANCE_ALLOWED_IPS</code> en el archivo <code>.env</code>.
+              💡 <strong>Cómo probar que funciona:</strong> Si dejas este campo vacío o pones una IP inventada como <code>1.2.3.4</code> y guardas, al recargar la tienda verás la pantalla de mantenimiento. Para seguir navegando tú, añade tu IP actual mostrada arriba.
             </span>
           </div>
 
