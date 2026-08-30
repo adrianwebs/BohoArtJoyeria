@@ -1,0 +1,127 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlserver"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         String   @default("CUSTOMER") // "ADMIN" | "CUSTOMER"
+  phone        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  orders       Order[]
+  reviews      Review[]
+}
+
+model Category {
+  id          String    @id @default(uuid())
+  name        String
+  slug        String    @unique
+  description String?   @db.NVarChar(Max)
+  image       String?   @db.NVarChar(Max)
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  products    Product[]
+}
+
+model Product {
+  id               String      @id @default(uuid())
+  name             String
+  slug             String      @unique
+  description      String      @db.NVarChar(Max)
+  shortDescription String?     @db.NVarChar(Max)
+  price            Decimal     @db.Decimal(10, 2)
+  comparePrice     Decimal?    @db.Decimal(10, 2)
+  costPrice        Decimal?    @db.Decimal(10, 2)
+  stock            Int         @default(10)
+  sku              String?
+  materials        String?     @db.NVarChar(Max)
+  dimensions       String?
+  weightGrams      Int?        @default(5)
+  images           String      @db.NVarChar(Max) // JSON Array of image URLs
+  isFeatured       Boolean     @default(false)
+  isActive         Boolean     @default(true)
+  categoryId       String
+  category         Category    @relation(fields: [categoryId], references: [id])
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  orderItems       OrderItem[]
+  reviews          Review[]
+}
+
+model Order {
+  id              String      @id @default(uuid())
+  orderNumber     String      @unique
+  customerName    String
+  customerEmail   String
+  customerPhone   String?
+  shippingAddress String      @db.NVarChar(Max)
+  city            String
+  postalCode      String
+  province        String
+  country         String      @default("ES")
+  subtotal        Decimal     @db.Decimal(10, 2)
+  shippingCost    Decimal     @db.Decimal(10, 2)
+  totalAmount     Decimal     @db.Decimal(10, 2)
+  status          String      @default("PENDING") // "PENDING" | "PAID" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED"
+  paymentMethod   String      @default("PAYPAL")
+  paypalOrderId   String?
+  trackingNumber  String?
+  notes           String?     @db.NVarChar(Max)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  userId          String?
+  user            User?       @relation(fields: [userId], references: [id])
+  items           OrderItem[]
+}
+
+model OrderItem {
+  id           String   @id @default(uuid())
+  orderId      String
+  order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId    String
+  product      Product  @relation(fields: [productId], references: [id])
+  productName  String
+  productImage String?  @db.NVarChar(Max)
+  unitPrice    Decimal  @db.Decimal(10, 2)
+  quantity     Int      @default(1)
+}
+
+model Review {
+  id              String   @id @default(uuid())
+  productId       String
+  product         Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  authorName      String
+  authorEmail     String
+  rating          Int      @default(5)
+  title           String?
+  comment         String   @db.NVarChar(Max)
+  isApproved      Boolean  @default(false)
+  isVerifiedBuyer Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  userId          String?
+  user            User?    @relation(fields: [userId], references: [id])
+}
+
+model StoreSetting {
+  id                    String   @id @default(uuid())
+  storeName             String   @default("Bohoart Jewelry")
+  announcementText      String   @default("✨ Envíos gratis a toda España en pedidos superiores a 40€ | Joyería artesanal hecha a mano ✨")
+  freeShippingThreshold Decimal  @default(40.00) @db.Decimal(10, 2)
+  standardShippingCost  Decimal  @default(3.95) @db.Decimal(10, 2)
+  paypalClientId        String?
+  contactEmail          String   @default("hola@bohoartjoyeria.com")
+  instagramUrl          String   @default("https://instagram.com/bohoartjewelry")
+  maintenanceMode       Boolean  @default(false)
+  maintenanceAllowedIps String?  @db.NVarChar(Max)
+  maintenanceTitle      String?  @default("✨ Estamos horneando novedades en el taller ✨")
+  maintenanceMessage    String?  @db.NVarChar(Max)
+  updatedAt             DateTime @updatedAt
+}

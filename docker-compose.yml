@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  bohoart:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ghcr.io/adrianwebs/bohoart-joyeria:latest
+    container_name: bohoart_web
+    restart: unless-stopped
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-https://bohoartjoyeria.com}
+      - DATABASE_URL=sqlserver://sqlserver:1433;database=${DB_NAME:-BohoartDB};user=${DB_USER:-sa};password=${MSSQL_SA_PASSWORD};encrypt=false;trustServerCertificate=true
+      - JWT_SECRET=${JWT_SECRET:-bohoart_super_secret_jwt_key_2026_handmade_jewelry}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@bohoartjoyeria.com}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-adminpassword123}
+      - MAINTENANCE_MODE=${MAINTENANCE_MODE:-false}
+      - MAINTENANCE_ALLOWED_IPS=${MAINTENANCE_ALLOWED_IPS:-127.0.0.1, ::1}
+      - NEXT_PUBLIC_PAYPAL_CLIENT_ID=${NEXT_PUBLIC_PAYPAL_CLIENT_ID:-sb}
+      - PAYPAL_CLIENT_SECRET=${PAYPAL_CLIENT_SECRET}
+      - PAYPAL_MODE=${PAYPAL_MODE:-sandbox}
+    networks:
+      - proxy
+      - sql-internal
+    volumes:
+      - /docker/clientes/Bohoart/uploads:/app/public/uploads
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.bohoart.rule=Host(`bohoartjoyeria.com`) || Host(`www.bohoartjoyeria.com`)"
+      - "traefik.http.routers.bohoart.entrypoints=websecure"
+      - "traefik.http.routers.bohoart.tls=true"
+      - "traefik.http.routers.bohoart.tls.certresolver=letsencrypt"
+      - "traefik.http.services.bohoart.loadbalancer.server.port=3000"
+
+volumes:
+  bohoart_uploads:
+
+networks:
+  proxy:
+    external: true
+  sql-internal:
+    external: true

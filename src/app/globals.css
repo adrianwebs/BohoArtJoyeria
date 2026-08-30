@@ -1,0 +1,185 @@
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+
+@layer base {
+  :root {
+    --background: 252 251 249;
+    --foreground: 44 37 35;
+  }
+
+  body {
+    background-color: #FCFBF9;
+    color: #2C2523;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, .font-serif-boho {
+    font-family: 'Playfair Display', Georgia, Cambria, 'Times New Roman', Times, serif;
+    letter-spacing: -0.01em;
+  }
+}
+
+/* Custom smooth scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #FAF6F0;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #D9BEA4;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #C87D55;
+}
+
+/* Boho aesthetic badges & cards */
+.boho-glass {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.boho-gradient-hero {
+  background: radial-gradient(circle at 10% 20%, rgba(247, 237, 226, 0.9) 0%, rgba(252, 251, 249, 1) 90%);
+}
+
+.boho-pattern {
+  background-color: #FAF6F0;
+  background-image: radial-gradient(#E5D0BC 0.85px, transparent 0.85px), radial-gradient(#E5D0BC 0.85px, #FAF6F0 0.85px);
+  background-size: 34px 34px;
+  background-position: 0 0, 17px 17px;
+}
+
+/* Explicit CSS Keyframes */
+@keyframes floatSlow {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-16px) rotate(2deg);
+  }
+}
+
+@keyframes floatReverse {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(16px) rotate(-2deg);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(200%);
+  }
+}
+
+@keyframes heartPop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.4);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes badgeBounce {
+  0% {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.04);
+  }
+}
+
+/* Animation utilities & micro-interactions */
+.animate-float-slow {
+  animation: floatSlow 7s ease-in-out infinite;
+}
+
+.animate-float-reverse {
+  animation: floatReverse 8s ease-in-out infinite;
+}
+
+.animate-heart-pop {
+  animation: heartPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.animate-badge-bounce {
+  animation: badgeBounce 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.animate-pulse-subtle {
+  animation: pulseGlow 3s ease-in-out infinite;
+}
+
+/* Shimmer overlay effect for badges/bars */
+.shimmer-mask {
+  position: relative;
+  overflow: hidden;
+}
+.shimmer-mask::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.35) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: shimmer 2.5s infinite;
+}
+
+/* Subtle magnetic / soft lift hover for cards */
+.hover-lift {
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.hover-lift:hover {
+  transform: translateY(-5px);
+}
+
+/* Soft button tap feedback */
+.btn-press {
+  transition: transform 0.15s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+.btn-press:active {
+  transform: scale(0.96);
+}
+
+
