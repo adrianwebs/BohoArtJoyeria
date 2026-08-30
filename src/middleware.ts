@@ -18,27 +18,48 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // 2. Extract real client IP (accounting for Traefik / reverse proxies / Cloudflare)
-  const forwardedFor = request.headers.get('x-forwarded-for');
-  const realIp = request.headers.get('x-real-ip');
+  // 2. If user is logged in as Admin (cookie present), ALWAYS allow access to the entire site
+  const adminToken = request.cookies.get('bohoart_admin_session')?.value;
+  if (adminToken) {
+    return NextResponse.next();
+  }
+
+  // 3. Extract all candidate client IPs (accounting for Traefik, reverse proxies, Cloudflare, etc.)
+  const candidateIps: string[] = [];
+
   const cfIp = request.headers.get('cf-connecting-ip');
-  
-  let clientIp = '127.0.0.1';
-  if (cfIp) {
-    clientIp = cfIp.trim();
-  } else if (forwardedFor) {
-    // In multi-proxy setups, x-forwarded-for contains "client, proxy1, proxy2"
-    clientIp = forwardedFor.split(',')[0].trim();
-  } else if (realIp) {
-    clientIp = realIp.trim();
+  if (cfIp) candidateIps.push(cfIp.trim());
+
+  const realIp = request.headers.get('x-real-ip');
+  if (realIp) candidateIps.push(realIp.trim());
+
+  const forwardedFor = request.headers.get('x-forwarded-for');
+  if (forwardedFor) {
+    forwardedFor.split(',').forEach((ip) => {
+      const trimmed = ip.trim();
+      if (trimmed) candidateIps.push(trimmed);
+    });
   }
 
-  // Strip IPv6 prefix if present (e.g. ::ffff:192.168.1.1)
-  if (clientIp.startsWith('::ffff:')) {
-    clientIp = clientIp.replace('::ffff:', '');
+  // Clean candidate IPs (strip IPv6 prefix and strip port if present)
+  const cleanCandidateIps = candidateIps.map((rawIp) => {
+    let ip = rawIp;
+    if (ip.startsWith('::ffff:')) {
+      ip = ip.replace('::ffff:', '');
+    }
+    // If IPv4 with port (e.g. 103.95.126.234:54321), extract only the IP
+    if (ip.includes('.') && ip.includes(':')) {
+      ip = ip.split(':')[0];
+    }
+    return ip.trim();
+  });
+
+  // Always include localhost as fallback candidate if nothing found
+  if (cleanCandidateIps.length === 0) {
+    cleanCandidateIps.push('127.0.0.1');
   }
 
-  // 3. Check environment variable override first
+  // 4. Check environment variable override first
   const envMaintenanceActive = process.env.MAINTENANCE_MODE === 'true';
   const envAllowedIps = (process.env.MAINTENANCE_ALLOWED_IPS || '')
     .split(',')
@@ -48,48 +69,55 @@ export async function middleware(request: NextRequest) {
   let isMaintenance = envMaintenanceActive;
   let allowedIps = [...envAllowedIps];
 
-  // 4. Fetch dynamic store setting if not hardcoded in env
-  if (!envMaintenanceActive) {
-    try {
-      const origin = request.nextUrl.origin;
-      const res = await fetch(`${origin}/api/settings`, {
-        cache: 'no-store',
-        headers: { 'x-internal-middleware': 'true' },
-      });
-      if (res.ok) {
-        const settings = await res.json();
-        if (settings?.maintenanceMode) {
-          isMaintenance = true;
-          const dynamicIps = (settings.maintenanceAllowedIps || '')
-            .split(',')
-            .map((ip: string) => ip.trim())
-            .filter(Boolean);
-          allowedIps.push(...dynamicIps);
-        }
+  // 5. Fetch dynamic store setting using internal localhost port (failsafe inside Docker)
+  try {
+    const port = process.env.PORT || 3000;
+    const internalUrl = `http://127.0.0.1:${port}/api/settings`;
+    const res = await fetch(internalUrl, {
+      cache: 'no-store',
+      headers: { 'x-internal-middleware': 'true' },
+    });
+    if (res.ok) {
+      const settings = await res.json();
+      if (settings?.maintenanceMode !== undefined) {
+        isMaintenance = Boolean(settings.maintenanceMode);
+        const dynamicIps = (settings.maintenanceAllowedIps || '')
+          .split(',')
+          .map((ip: string) => ip.trim())
+          .filter(Boolean);
+        allowedIps.push(...dynamicIps);
       }
-    } catch {
-      // Fallback safely to env
     }
+  } catch {
+    // If internal fetch fails, fallback to environment variable
   }
 
-  // 5. Verify if client IP is authorized
-  const isIpAllowed = allowedIps.some((allowed) => {
-    const cleanAllowed = allowed.trim();
-    if (!cleanAllowed) return false;
-    if (cleanAllowed === '*' || cleanAllowed.toLowerCase() === 'all') return true;
-    if (cleanAllowed === clientIp) return true;
+  // 6. Clean allowed IPs list
+  const cleanAllowedIps = allowedIps.map((allowed) => {
+    let ip = allowed.trim();
+    if (ip.startsWith('::ffff:')) ip = ip.replace('::ffff:', '');
+    if (ip.includes('.') && ip.includes(':')) ip = ip.split(':')[0];
+    return ip;
+  }).filter(Boolean);
+
+  // 7. Verify if ANY candidate IP is authorized
+  const isIpAllowed = cleanAllowedIps.some((allowed) => {
+    if (allowed === '*' || allowed.toLowerCase() === 'all') return true;
     
-    // Localhost variations
-    if (
-      (cleanAllowed === '127.0.0.1' || cleanAllowed === '::1' || cleanAllowed === 'localhost') &&
-      (clientIp === '127.0.0.1' || clientIp === '::1' || clientIp === 'localhost')
-    ) {
-      return true;
-    }
-    return false;
+    return cleanCandidateIps.some((clientIp) => {
+      if (allowed === clientIp) return true;
+      // Localhost variations
+      if (
+        (allowed === '127.0.0.1' || allowed === '::1' || allowed === 'localhost') &&
+        (clientIp === '127.0.0.1' || clientIp === '::1' || clientIp === 'localhost')
+      ) {
+        return true;
+      }
+      return false;
+    });
   });
 
-  // 6. Maintenance Routing
+  // 8. Maintenance Routing
   if (isMaintenance && !isIpAllowed) {
     if (pathname !== '/mantenimiento') {
       const maintenanceUrl = new URL('/mantenimiento', request.url);
