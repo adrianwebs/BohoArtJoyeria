@@ -32,7 +32,7 @@ Si ya tienes SQL Server instalado en tu VPS o en Azure SQL / AWS RDS, simplement
 
 ## 3. Configuración de Variables de Entorno en Producción (`.env`)
 
-Crea un archivo `.env` en tu servidor en la ruta `/opt/bohoart/.env` con tus datos reales:
+Crea un archivo `.env` en tu servidor en la ruta `/docker/clientes/bohoart/.env` con tus datos reales:
 
 ```env
 # Next.js y Entorno
@@ -64,20 +64,21 @@ PAYPAL_MODE=sandbox
 ## 4. Despliegue Inicial en el Servidor VPS
 
 ```bash
-# 1. Clonar el repositorio en el servidor
-git clone https://github.com/tu-usuario/bohoart.git /opt/bohoart
-cd /opt/bohoart
+# 1. Crear carpeta del cliente y clonar el repositorio
+mkdir -p /docker/clientes/bohoart
+git clone https://github.com/adrianwebs/BohoArtJoyeria.git /docker/clientes/bohoart
+cd /docker/clientes/bohoart
 
-# 2. Copiar y configurar las variables
+# 2. Configurar las variables
 cp .env.example .env
 nano .env
 
-# 3. Construir y levantar los contenedores en segundo plano
+# 3. Construir y levantar los contenedores con Traefik
 docker compose up -d --build
 
 # 4. Crear las tablas en SQL Server y sembrar los datos iniciales
-docker compose exec web npx prisma db push
-docker compose exec web npm run db:seed
+docker compose exec bohoart npx prisma db push
+docker compose exec bohoart npm run db:seed
 ```
 
 ---

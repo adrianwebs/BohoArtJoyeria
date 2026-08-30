@@ -25,7 +25,7 @@ services:
       - proxy
       - sql-internal
     volumes:
-      - /docker/clientes/Bohoart/uploads:/app/public/uploads
+      - /docker/clientes/bohoart/uploads:/app/public/uploads
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=proxy"
