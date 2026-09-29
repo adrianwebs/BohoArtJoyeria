@@ -9,9 +9,11 @@ import { Category } from '@/lib/types';
 
 interface NavbarProps {
   categories?: Category[];
+  /** Collections currently live (seasonal landings); shown as highlighted links. */
+  collections?: { name: string; slug: string }[];
 }
 
-export function Navbar({ categories = [] }: NavbarProps) {
+export function Navbar({ categories = [], collections = [] }: NavbarProps) {
   const { openCart, totalItems } = useCart();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -27,7 +29,7 @@ export function Navbar({ categories = [] }: NavbarProps) {
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-boho-sand-300/60 transition-all">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20">
+        <div className="flex items-center justify-between h-24 sm:h-28">
           
           {/* Mobile menu trigger */}
           <div className="flex items-center lg:hidden">
@@ -79,6 +81,16 @@ export function Navbar({ categories = [] }: NavbarProps) {
             >
               Collares
             </Link>
+            {collections.slice(0, 2).map((c) => (
+              <Link
+                key={c.slug}
+                href={`/colecciones/${c.slug}`}
+                className="inline-flex items-center space-x-1 py-1 text-sm font-bold text-boho-terracotta hover:text-boho-terracotta-600 transition-colors"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>{c.name}</span>
+              </Link>
+            ))}
             <Link
               href="/sobre-nosotros"
               className="relative py-1 text-sm font-medium text-boho-charcoal hover:text-boho-terracotta transition-colors after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-0 hover:after:w-full after:bg-boho-terracotta after:transition-all after:duration-300"
@@ -88,23 +100,24 @@ export function Navbar({ categories = [] }: NavbarProps) {
           </nav>
 
           {/* Brand Logo in Center */}
-          <div className="flex-shrink-0 flex items-center justify-center">
-            <Link href="/" className="flex items-center space-x-3 group">
-              <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-boho-terracotta/30 group-hover:border-boho-terracotta group-hover:scale-105 transition-all duration-300 shadow-sm">
+          <div className="flex-shrink-0 flex items-center justify-center py-2">
+            <Link href="/" className="flex items-center space-x-3 sm:space-x-4 group">
+              <div className="relative w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 group-hover:scale-105 transition-transform duration-300">
                 <Image
                   src="/logo.png"
                   alt="Bohoart Jewelry Logo"
                   fill
-                  sizes="48px"
-                  className="object-cover transition-transform duration-500 group-hover:scale-110"
+                  sizes="(max-width: 640px) 80px, 96px"
+                  className="object-contain"
                   priority
+                  unoptimized
                 />
               </div>
               <div className="text-center sm:text-left">
-                <span className="font-serif-boho text-xl sm:text-2xl font-bold tracking-tight text-boho-charcoal block group-hover:text-boho-terracotta transition-colors duration-300">
+                <span className="font-serif-boho text-2xl sm:text-3xl font-bold tracking-tight text-boho-charcoal block group-hover:text-boho-terracotta transition-colors duration-300">
                   BOHO ART
                 </span>
-                <span className="text-[10px] tracking-[0.25em] text-boho-charcoal-muted uppercase block font-sans">
+                <span className="text-[11px] sm:text-xs tracking-[0.25em] text-boho-charcoal-muted uppercase block font-sans">
                   Handmade Jewelry
                 </span>
               </div>
@@ -216,6 +229,16 @@ export function Navbar({ categories = [] }: NavbarProps) {
             >
               • Packs de Regalo & Colecciones
             </Link>
+            {collections.map((c) => (
+              <Link
+                key={c.slug}
+                href={`/colecciones/${c.slug}`}
+                onClick={() => setMobileMenuOpen(false)}
+                className="block px-3 py-2 text-sm font-bold text-boho-terracotta"
+              >
+                ✨ {c.name}
+              </Link>
+            ))}
             <div className="pt-3 border-t border-boho-sand-200">
               <Link
                 href="/sobre-nosotros"

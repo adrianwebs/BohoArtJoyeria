@@ -54,6 +54,8 @@ jobs:
             echo "🚀 Iniciando despliegue de Bohoart Jewelry en $APP_DIR..."
             
             mkdir -p "$APP_DIR/uploads"
+            # The container runs as uid 1001 (nextjs) and must be able to write uploaded product photos here
+            chmod -R a+rwX "$APP_DIR/uploads" || true
             cd "$APP_DIR"
             
             # Si el directorio no tiene git inicializado, inicializar y sincronizar con origin
@@ -73,7 +75,6 @@ jobs:
             echo "📦 Reconstruyendo contenedores Docker con Traefik..."
             docker compose up -d --build --remove-orphans
             
-            echo "🗄️ Aplicando migraciones de base de datos..."
-            docker compose exec -T bohoart npx prisma db push --accept-data-loss || true
+            echo "🗄️ El esquema de base de datos se aplica en el arranque del contenedor (docker-entrypoint.sh)."
             
             echo "✨ Despliegue completado con éxito en https://bohoartjoyeria.com"

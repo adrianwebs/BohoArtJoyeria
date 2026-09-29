@@ -424,7 +424,7 @@ export const INITIAL_SETTINGS: StoreSetting = {
   standardShippingCost: 3.95,
   paypalClientId: 'sb',
   contactEmail: 'hola@bohoartjoyeria.com',
-  instagramUrl: 'https://instagram.com/bohoartjewelry',
+  instagramUrl: 'https://instagram.com/bohoart.jewelry',
   maintenanceMode: false,
   maintenanceAllowedIps: '127.0.0.1, ::1',
   maintenanceTitle: '✨ Estamos preparando nuevas joyas en el taller ✨',

@@ -2,6 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { HeroBanner } from '@/components/store/HeroBanner';
+import { CollectionSpotlight } from '@/components/store/CollectionSpotlight';
 import { FeaturedCategories } from '@/components/store/FeaturedCategories';
 import { ProductGrid } from '@/components/store/ProductGrid';
 import { CraftsmanshipSection } from '@/components/store/CraftsmanshipSection';
@@ -15,11 +16,15 @@ export default async function HomePage() {
   const featuredProducts = await storeService.getProducts({ featured: true });
   const allProducts = await storeService.getProducts();
   const reviews = await storeService.getReviews({ approvedOnly: true });
+  const spotlight = await storeService.getHomeCollection();
 
   return (
     <div>
       {/* Hero */}
       <HeroBanner />
+
+      {/* Seasonal collection currently live (Feria, Halloween, Navidad...) */}
+      {spotlight && <CollectionSpotlight collection={spotlight} />}
 
       {/* Featured Categories */}
       <ScrollReveal delay={100}>

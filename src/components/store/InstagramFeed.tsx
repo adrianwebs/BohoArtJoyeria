@@ -48,13 +48,13 @@ export function InstagramFeed() {
         
         <div className="text-center max-w-xl mx-auto mb-10">
           <a
-            href="https://instagram.com/bohoartjewelry"
+            href="https://instagram.com/bohoart.jewelry"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center space-x-2 text-boho-terracotta hover:text-boho-terracotta-600 font-bold text-xs uppercase tracking-widest mb-1 transition-colors"
           >
             <Instagram className="w-4 h-4" />
-            <span>@bohoartjewelry en Instagram</span>
+            <span>@bohoart.jewelry en Instagram</span>
           </a>
           <h2 className="font-serif-boho text-2xl sm:text-3xl font-bold text-boho-charcoal">
             Síguenos en el Taller
@@ -69,7 +69,7 @@ export function InstagramFeed() {
           {INSTAGRAM_POSTS.map((post) => (
             <a
               key={post.id}
-              href="https://instagram.com/bohoartjewelry"
+              href="https://instagram.com/bohoart.jewelry"
               target="_blank"
               rel="noopener noreferrer"
               className="group relative aspect-square rounded-2xl overflow-hidden bg-boho-sand-200 shadow-soft hover:shadow-card hover:-translate-y-1 transition-all duration-300 active:scale-95"

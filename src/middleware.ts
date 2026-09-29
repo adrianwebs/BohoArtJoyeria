@@ -1,7 +1,54 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
+const ADMIN_COOKIE = 'bohoart_admin_token';
+// Read at request time; with no secret configured no admin token is ever accepted.
+const getSecret = () => process.env.JWT_SECRET || '';
+
+function base64UrlToBytes(input: string): Uint8Array {
+  const b64 = input.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(input.length / 4) * 4, '=');
+  const bin = atob(b64);
+  return Uint8Array.from(bin, (c) => c.charCodeAt(0));
+}
+
+/** Verifies an HS256 JWT signed with JWT_SECRET (Edge-safe, no Node crypto) and checks role/expiry. */
+async function isValidAdminToken(token: string | undefined): Promise<boolean> {
+  const secret = getSecret();
+  if (!token || !secret) return false;
+  const parts = token.split('.');
+  if (parts.length !== 3) return false;
+  try {
+    const key = await crypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode(secret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['verify']
+    );
+    const ok = await crypto.subtle.verify(
+      'HMAC',
+      key,
+      base64UrlToBytes(parts[2]) as BufferSource,
+      new TextEncoder().encode(`${parts[0]}.${parts[1]}`)
+    );
+    if (!ok) return false;
+    const payload = JSON.parse(new TextDecoder().decode(base64UrlToBytes(parts[1])));
+    if (payload.role !== 'ADMIN') return false;
+    if (payload.exp && payload.exp * 1000 < Date.now()) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  const isAdmin = await isValidAdminToken(request.cookies.get(ADMIN_COOKIE)?.value);
+
+  // Admin panel requires a valid admin session (API routes enforce their own auth).
+  if (pathname.startsWith('/admin') && !isAdmin) {
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
 
   // 1. Always allow static assets, Next.js internal paths, favicon, images, and admin/auth routes
   if (
@@ -18,9 +65,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // 2. If user is logged in as Admin (cookie present), ALWAYS allow access to the entire site
-  const adminToken = request.cookies.get('bohoart_admin_session')?.value;
-  if (adminToken) {
+  // 2. If user is logged in as Admin (valid signed session), ALWAYS allow access to the entire site
+  if (isAdmin) {
     return NextResponse.next();
   }
 
@@ -75,7 +121,7 @@ export async function middleware(request: NextRequest) {
     const internalUrl = `http://127.0.0.1:${port}/api/settings`;
     const res = await fetch(internalUrl, {
       cache: 'no-store',
-      headers: { 'x-internal-middleware': 'true' },
+      headers: { 'x-internal-middleware': getSecret() },
     });
     if (res.ok) {
       const settings = await res.json();

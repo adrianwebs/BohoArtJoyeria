@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Product, Category } from '@/lib/types';
 import { formatPrice } from '@/lib/utils';
+import { ImageUploader } from '@/components/admin/ImageUploader';
 
 interface ProductsAdminClientProps {
   initialProducts: Product[];
@@ -43,10 +44,11 @@ export function ProductsAdminClient({
   const [shortDescription, setShortDescription] = useState('');
   const [materials, setMaterials] = useState('Arcilla polimérica, fornituras hipoalergénicas en acero inoxidable');
   const [dimensions, setDimensions] = useState('5.0 cm x 2.5 cm');
-  const [imageUrl, setImageUrl] = useState('https://images.unsplash.com/photo-1630019852942-f89202989a59?w=800&auto=format&fit=crop&q=80');
+  const [images, setImages] = useState<string[]>([]);
   const [isFeatured, setIsFeatured] = useState(false);
   const [isActive, setIsActive] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState('');
 
   const openNewModal = () => {
     setEditingProduct(null);
@@ -60,9 +62,10 @@ export function ProductsAdminClient({
     setShortDescription('');
     setMaterials('Arcilla polimérica premium, fornituras hipoalergénicas en acero inoxidable');
     setDimensions('5.0 cm x 2.5 cm');
-    setImageUrl('https://images.unsplash.com/photo-1630019852942-f89202989a59?w=800&auto=format&fit=crop&q=80');
+    setImages([]);
     setIsFeatured(false);
     setIsActive(true);
+    setFormError('');
     setIsModalOpen(true);
   };
 
@@ -78,9 +81,10 @@ export function ProductsAdminClient({
     setShortDescription(p.shortDescription || '');
     setMaterials(p.materials || '');
     setDimensions(p.dimensions || '');
-    setImageUrl(p.images[0] || '');
+    setImages(p.images);
     setIsFeatured(p.isFeatured);
     setIsActive(p.isActive);
+    setFormError('');
     setIsModalOpen(true);
   };
 
@@ -92,7 +96,7 @@ export function ProductsAdminClient({
     try {
       const payload = {
         name,
-        slug: slug || name.toLowerCase().replace(/\s+/g, '-'),
+        slug: slug || undefined,
         price: parseFloat(price),
         comparePrice: comparePrice ? parseFloat(comparePrice) : null,
         stock: parseInt(stock, 10) || 0,
@@ -101,38 +105,37 @@ export function ProductsAdminClient({
         shortDescription,
         materials,
         dimensions,
-        images: [imageUrl],
+        images,
         isFeatured,
         isActive,
       };
 
-      if (editingProduct) {
-        const res = await fetch(`/api/products/${editingProduct.id}`, {
-          method: 'PUT',
+      const res = await fetch(
+        editingProduct ? `/api/products/${editingProduct.id}` : '/api/products',
+        {
+          method: editingProduct ? 'PUT' : 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
-        });
-        if (res.ok) {
-          const updated = await res.json();
-          setProducts((prev) =>
-            prev.map((item) => (item.id === updated.id ? { ...item, ...updated } : item))
-          );
-          setIsModalOpen(false);
         }
-      } else {
-        const res = await fetch('/api/products', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        if (res.ok) {
-          const created = await res.json();
-          setProducts((prev) => [created, ...prev]);
-          setIsModalOpen(false);
-        }
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setFormError(
+          res.status === 401
+            ? 'Tu sesión ha caducado. Vuelve a iniciar sesión.'
+            : data.error || 'No se pudo guardar el producto.'
+        );
+        return;
       }
+      setProducts((prev) =>
+        editingProduct
+          ? prev.map((item) => (item.id === data.id ? { ...item, ...data } : item))
+          : [data, ...prev]
+      );
+      setIsModalOpen(false);
     } catch (err) {
       console.error(err);
+      setFormError('Error de conexión con el servidor.');
     } finally {
       setSaving(false);
     }
@@ -143,10 +146,18 @@ export function ProductsAdminClient({
     try {
       const res = await fetch(`/api/products/${id}`, { method: 'DELETE' });
       if (res.ok) {
-        setProducts((prev) => prev.filter((p) => p.id !== id));
+        // Products that appear in past orders are archived (hidden) instead of deleted; refetch to reflect that.
+        const fresh = await fetch(`/api/products/${id}`).then((r) => (r.ok ? r.json() : null));
+        setProducts((prev) =>
+          fresh ? prev.map((p) => (p.id === id ? { ...p, ...fresh } : p)) : prev.filter((p) => p.id !== id)
+        );
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || 'No se pudo eliminar el producto.');
       }
     } catch (err) {
       console.error(err);
+      alert('Error de conexión con el servidor.');
     }
   };
 
@@ -401,18 +412,12 @@ export function ProductsAdminClient({
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-boho-charcoal mb-1">
-                  URL Imagen Principal (Placeholder o Foto)
-                </label>
-                <input
-                  type="text"
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  placeholder="https://images.unsplash.com/..."
-                  className="w-full px-3.5 py-2 text-xs bg-boho-sand-50 border border-boho-sand-300 rounded-xl focus:outline-none focus:border-boho-terracotta"
-                />
-              </div>
+              <ImageUploader
+                multiple
+                label="Fotos del producto (la primera es la portada)"
+                value={images}
+                onChange={setImages}
+              />
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -477,6 +482,12 @@ export function ProductsAdminClient({
                   <span>Producto Visible y Activo</span>
                 </label>
               </div>
+
+              {formError && (
+                <p role="alert" className="text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-xl px-3.5 py-2">
+                  {formError}
+                </p>
+              )}
 
               <div className="flex justify-end space-x-3 pt-4 border-t border-boho-sand-200">
                 <button

@@ -72,12 +72,12 @@ export default function ContactPage() {
                 Escríbenos un DM para dudas rápidas o ver vídeos del taller.
               </p>
               <a
-                href="https://instagram.com/bohoartjewelry"
+                href="https://instagram.com/bohoart.jewelry"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-xs font-bold text-boho-terracotta hover:underline block"
               >
-                @bohoartjewelry
+                @bohoart.jewelry
               </a>
             </div>
 

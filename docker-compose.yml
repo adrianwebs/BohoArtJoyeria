@@ -13,14 +13,22 @@ services:
       - NODE_ENV=production
       - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-https://bohoartjoyeria.com}
       - DATABASE_URL=sqlserver://sqlserver:1433;database=${DB_NAME:-BohoartDB};user=${DB_USER:-sa};password=${MSSQL_SA_PASSWORD};encrypt=false;trustServerCertificate=true
-      - JWT_SECRET=${JWT_SECRET:-bohoart_super_secret_jwt_key_2026_handmade_jewelry}
-      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@bohoartjoyeria.com}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-adminpassword123}
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET es obligatorio (openssl rand -hex 32)}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:?ADMIN_EMAIL es obligatorio}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:?ADMIN_PASSWORD es obligatorio}
       - MAINTENANCE_MODE=${MAINTENANCE_MODE:-false}
       - MAINTENANCE_ALLOWED_IPS=${MAINTENANCE_ALLOWED_IPS:-127.0.0.1, ::1}
       - NEXT_PUBLIC_PAYPAL_CLIENT_ID=${NEXT_PUBLIC_PAYPAL_CLIENT_ID:-sb}
       - PAYPAL_CLIENT_SECRET=${PAYPAL_CLIENT_SECRET}
       - PAYPAL_MODE=${PAYPAL_MODE:-sandbox}
+      - PAYPAL_CLIENT_ID=${PAYPAL_CLIENT_ID:-${NEXT_PUBLIC_PAYPAL_CLIENT_ID}}
+      - UPLOAD_DIR=/app/public/uploads
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASS=${SMTP_PASS:-}
+      - MAIL_FROM=${MAIL_FROM:-}
+      - ORDER_NOTIFY_EMAIL=${ORDER_NOTIFY_EMAIL:-}
     networks:
       - proxy
       - sql-internal

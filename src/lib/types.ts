@@ -90,6 +90,8 @@ export interface StoreSetting {
   paypalClientId?: string | null;
   contactEmail: string;
   instagramUrl: string;
+  bizumPhone?: string | null;
+  paypalMeUrl?: string | null;
   maintenanceMode: boolean;
   maintenanceAllowedIps: string;
   maintenanceTitle?: string;
@@ -106,4 +108,29 @@ export interface AdminUser {
   name: string;
   email: string;
   role: 'ADMIN' | 'CUSTOMER';
+}
+
+export type CollectionStatus = 'live' | 'scheduled' | 'ended' | 'inactive';
+
+export interface Collection {
+  id: string;
+  name: string;
+  slug: string;
+  tagline?: string | null;
+  description?: string | null;
+  heroImage?: string | null;
+  accentColor: string;
+  startsAt?: string | null; // original configured dates (ISO)
+  endsAt?: string | null;
+  repeatYearly: boolean;
+  isActive: boolean;
+  showOnHome: boolean;
+  sortOrder: number;
+  status: CollectionStatus;
+  /** Effective window for the current/next occurrence (differs from startsAt/endsAt when repeatYearly). */
+  windowStart?: string | null;
+  windowEnd?: string | null;
+  productCount?: number;
+  productIds?: string[];
+  products?: Product[];
 }

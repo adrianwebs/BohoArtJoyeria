@@ -5,6 +5,9 @@ import { Preloader } from '@/components/ui/Preloader';
 import { StoreLayoutWrapper } from '@/components/layout/StoreLayoutWrapper';
 import { storeService } from '@/lib/storeService';
 
+// Data comes from the database at request time; never prerender at build (no DB inside the Docker build).
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://bohoartjoyeria.com'),
   title: {
@@ -59,6 +62,9 @@ export default async function RootLayout({
 }>) {
   const settings = await storeService.getSettings();
   const categories = await storeService.getCategories();
+  const liveCollections = (await storeService.getCollections())
+    .filter((c) => c.status === 'live')
+    .map((c) => ({ name: c.name, slug: c.slug }));
 
   return (
     <html lang="es" className="scroll-smooth" data-scroll-behavior="smooth" suppressHydrationWarning>
@@ -77,6 +83,7 @@ export default async function RootLayout({
             announcementText={settings.announcementText}
             instagramUrl={settings.instagramUrl}
             categories={categories}
+            collections={liveCollections}
           >
             {children}
           </StoreLayoutWrapper>

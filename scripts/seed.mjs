@@ -7,8 +7,11 @@ async function main() {
   console.log('🌱 Iniciando carga de datos iniciales en SQL Server para Bohoart Jewelry...');
 
   // 1. Admin user
-  const adminEmail = process.env.ADMIN_EMAIL || 'admin@bohoartjoyeria.com';
-  const adminPassword = process.env.ADMIN_PASSWORD || 'adminpassword123';
+  const adminEmail = process.env.ADMIN_EMAIL;
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  if (!adminEmail || !adminPassword) {
+    throw new Error('ADMIN_EMAIL y ADMIN_PASSWORD son obligatorios (sin valores por defecto).');
+  }
   const hashedPassword = await bcrypt.hash(adminPassword, 10);
 
   const admin = await prisma.user.upsert({
@@ -35,8 +38,23 @@ async function main() {
       freeShippingThreshold: 40.0,
       standardShippingCost: 3.95,
       contactEmail: 'hola@bohoartjoyeria.com',
-      instagramUrl: 'https://instagram.com/bohoartjewelry',
+      instagramUrl: 'https://instagram.com/bohoart.jewelry',
+      bizumPhone: '+34 610 97 72 77',
+      paypalMeUrl: 'https://www.paypal.me/rcarreterohernandez',
     },
+  });
+  // Fix databases created with the old (wrong) default Instagram URL, without touching custom values.
+  await prisma.storeSetting.updateMany({
+    where: { instagramUrl: 'https://instagram.com/bohoartjewelry' },
+    data: { instagramUrl: 'https://instagram.com/bohoart.jewelry' },
+  });
+  await prisma.storeSetting.updateMany({
+    where: { id: 'store-default', bizumPhone: null },
+    data: { bizumPhone: '+34 610 97 72 77' },
+  });
+  await prisma.storeSetting.updateMany({
+    where: { id: 'store-default', paypalMeUrl: null },
+    data: { paypalMeUrl: 'https://www.paypal.me/rcarreterohernandez' },
   });
   console.log('⚙️ Configuración de la tienda lista.');
 
@@ -87,7 +105,7 @@ async function main() {
   for (const cat of categories) {
     await prisma.category.upsert({
       where: { slug: cat.slug },
-      update: cat,
+      update: {}, // never overwrite edits made from the admin panel
       create: cat,
     });
   }

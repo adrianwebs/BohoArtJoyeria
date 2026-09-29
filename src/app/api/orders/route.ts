@@ -1,42 +1,73 @@
 import { NextResponse } from 'next/server';
 import { storeService } from '@/lib/storeService';
+import { requireAdmin } from '@/lib/auth';
+import { apiError } from '@/lib/apiError';
+import { parseOrderInput, toCreateOrder } from '@/lib/orderInput';
+import { sendOrderReceivedEmails } from '@/lib/mailer';
 
-export async function GET() {
-  const orders = await storeService.getOrders();
-  return NextResponse.json(orders);
+export const dynamic = 'force-dynamic';
+
+export async function GET(req: Request) {
+  const denied = await requireAdmin();
+  if (denied) return denied;
+
+  try {
+    const { searchParams } = new URL(req.url);
+    // Without `page` the full list is returned (used by the clients page); with it, a filtered page.
+    if (searchParams.has('page')) {
+      return NextResponse.json(
+        await storeService.getOrdersPaged({
+          page: Number(searchParams.get('page')) || 1,
+          pageSize: Number(searchParams.get('pageSize')) || 20,
+          status: searchParams.get('status') || undefined,
+          q: searchParams.get('q') || undefined,
+        })
+      );
+    }
+    return NextResponse.json(await storeService.getOrders());
+  } catch (error) {
+    return apiError(error, 'Error al cargar los pedidos');
+  }
 }
 
+/**
+ * Public order creation for MANUAL payment methods (Bizum, PayPal.Me). The order is created as PENDING and the
+ * shop confirms the payment by hand from the admin. Prices are recomputed server-side.
+ * (The automatic PayPal flow lives in /api/payments/paypal/* and is currently not used by the checkout.)
+ */
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-
-    if (!body.customerName || !body.customerEmail || !body.shippingAddress || !body.items || body.items.length === 0) {
-      return NextResponse.json({ error: 'Datos de pedido incompletos' }, { status: 400 });
+    const method = body.paymentMethod;
+    if (method !== 'BIZUM' && method !== 'PAYPAL_ME') {
+      return NextResponse.json({ error: 'Método de pago no válido' }, { status: 400 });
     }
 
-    const order = await storeService.createOrder({
-      customerName: body.customerName,
-      customerEmail: body.customerEmail,
-      customerPhone: body.customerPhone || null,
-      shippingAddress: body.shippingAddress,
-      city: body.city,
-      postalCode: body.postalCode,
-      province: body.province || body.city,
-      country: body.country || 'España',
-      subtotal: Number(body.subtotal),
-      shippingCost: Number(body.shippingCost),
-      totalAmount: Number(body.totalAmount),
-      status: body.status || 'PAID',
-      paymentMethod: body.paymentMethod || 'PAYPAL',
-      paypalOrderId: body.paypalOrderId || null,
-      trackingNumber: body.trackingNumber || null,
-      notes: body.notes || null,
-      items: body.items,
+    const settings = await storeService.getSettings();
+    if ((method === 'BIZUM' && !settings.bizumPhone) || (method === 'PAYPAL_ME' && !settings.paypalMeUrl)) {
+      return NextResponse.json({ error: 'Este método de pago no está disponible ahora mismo' }, { status: 400 });
+    }
+
+    const parsed = parseOrderInput(body);
+    if (typeof parsed === 'string') {
+      return NextResponse.json({ error: parsed }, { status: 400 });
+    }
+
+    const order = await storeService.createOrder(
+      toCreateOrder(parsed, { status: 'PENDING', paymentMethod: method })
+    );
+
+    void sendOrderReceivedEmails(order, {
+      bizumPhone: settings.bizumPhone,
+      paypalMeUrl: settings.paypalMeUrl,
+      notifyEmail: process.env.ORDER_NOTIFY_EMAIL || settings.contactEmail,
     });
 
-    return NextResponse.json(order, { status: 201 });
+    return NextResponse.json(
+      { orderNumber: order.orderNumber, totalAmount: order.totalAmount },
+      { status: 201 }
+    );
   } catch (error) {
-    console.error('Error creating order:', error);
-    return NextResponse.json({ error: 'Error al procesar el pedido' }, { status: 500 });
+    return apiError(error, 'Error al procesar el pedido');
   }
 }

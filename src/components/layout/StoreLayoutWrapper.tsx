@@ -13,6 +13,7 @@ interface StoreLayoutWrapperProps {
   announcementText: string;
   instagramUrl: string;
   categories: Category[];
+  collections?: { name: string; slug: string }[];
 }
 
 export function StoreLayoutWrapper({
@@ -20,6 +21,7 @@ export function StoreLayoutWrapper({
   announcementText,
   instagramUrl,
   categories,
+  collections = [],
 }: StoreLayoutWrapperProps) {
   const pathname = usePathname();
 
@@ -39,7 +41,7 @@ export function StoreLayoutWrapper({
         text={announcementText}
         instagramUrl={instagramUrl}
       />
-      <Navbar categories={categories} />
+      <Navbar categories={categories} collections={collections} />
       <main className="flex-1">
         {children}
       </main>

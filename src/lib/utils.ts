@@ -38,3 +38,10 @@ export function slugify(text: string): string {
     .replace(/[^\w-]+/g, '')
     .replace(/--+/g, '-');
 }
+
+export const PAYPAL_ME_RE = /^https:\/\/(www\.)?paypal\.me\/[A-Za-z0-9._-]+\/?$/;
+
+/** Builds a PayPal.Me link with the amount prefilled, e.g. https://www.paypal.me/user/25.90EUR */
+export function paypalMeLink(baseUrl: string, amount: number): string {
+  return `${baseUrl.replace(/\/$/, '')}/${amount.toFixed(2)}EUR`;
+}

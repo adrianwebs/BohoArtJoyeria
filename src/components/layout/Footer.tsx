@@ -54,21 +54,22 @@ export function Footer() {
           
           {/* Col 1 & 2: Brand Bio & Newsletter */}
           <div className="lg:col-span-2 space-y-4">
-            <div className="flex items-center space-x-3">
-              <div className="relative w-12 h-12 rounded-full overflow-hidden border border-boho-terracotta/40">
+            <div className="flex items-center space-x-4">
+              <div className="relative w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0">
                 <Image
                   src="/logo.png"
                   alt="Bohoart Jewelry Logo"
                   fill
-                  sizes="48px"
-                  className="object-cover"
+                  sizes="96px"
+                  className="object-contain"
+                  unoptimized
                 />
               </div>
               <div>
-                <span className="font-serif-boho text-xl font-bold tracking-tight text-boho-charcoal">
+                <span className="font-serif-boho text-2xl font-bold tracking-tight text-boho-charcoal">
                   BOHO ART
                 </span>
-                <span className="text-[10px] tracking-[0.2em] text-boho-charcoal-muted uppercase block font-sans">
+                <span className="text-[11px] tracking-[0.2em] text-boho-charcoal-muted uppercase block font-sans">
                   Handmade Jewelry
                 </span>
               </div>
@@ -170,7 +171,7 @@ export function Footer() {
             </h5>
             <div className="space-y-3">
               <a
-                href="https://instagram.com/bohoartjewelry"
+                href="https://instagram.com/bohoart.jewelry"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center space-x-2 text-xs text-boho-charcoal hover:text-boho-terracotta transition-colors"
@@ -178,7 +179,7 @@ export function Footer() {
                 <div className="w-8 h-8 rounded-full bg-white border border-boho-sand-300 flex items-center justify-center text-boho-terracotta">
                   <Instagram className="w-4 h-4" />
                 </div>
-                <span>@bohoartjewelry</span>
+                <span>@bohoart.jewelry</span>
               </a>
 
               <p className="text-[11px] text-boho-charcoal-muted pt-2">

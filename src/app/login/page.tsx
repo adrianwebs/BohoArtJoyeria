@@ -46,13 +46,14 @@ export default function LoginPage() {
         
         {/* Brand Header */}
         <div className="text-center space-y-2">
-          <div className="relative w-16 h-16 rounded-full overflow-hidden mx-auto border-2 border-boho-terracotta/40 shadow-soft">
+          <div className="relative w-28 h-28 sm:w-32 sm:h-32 mx-auto">
             <Image
               src="/logo.png"
               alt="Bohoart Logo"
               fill
-              className="object-cover"
+              className="object-contain"
               priority
+              unoptimized
             />
           </div>
           <h1 className="font-serif-boho text-2xl font-bold text-boho-charcoal">

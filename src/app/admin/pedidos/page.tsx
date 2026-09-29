@@ -19,28 +19,56 @@ import { Order, OrderStatus } from '@/lib/types';
 import { formatPrice, formatDate } from '@/lib/utils';
 
 export default function AdminOrdersPage() {
+  const PAGE_SIZE = 20;
   const [orders, setOrders] = useState<Order[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [trackingInput, setTrackingInput] = useState('');
   const [updating, setUpdating] = useState(false);
+  const [actionError, setActionError] = useState('');
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  // Debounce the search box and go back to page 1 when filters change.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(search.trim());
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [statusFilter]);
 
   const fetchOrders = async () => {
+    setLoading(true);
     try {
-      const res = await fetch('/api/orders');
+      const qs = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE), status: statusFilter });
+      if (debouncedSearch) qs.set('q', debouncedSearch);
+      const res = await fetch(`/api/orders?${qs}`);
       if (res.ok) {
         const data = await res.json();
-        setOrders(data);
+        setOrders(data.items);
+        setTotal(data.total);
       }
     } catch (e) {
       console.error(e);
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchOrders();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, statusFilter, debouncedSearch]);
 
   const handleUpdateStatus = async (orderId: string, newStatus: OrderStatus) => {
     setUpdating(true);
@@ -54,12 +82,15 @@ export default function AdminOrdersPage() {
         }),
       });
 
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        const updated = await res.json();
-        setOrders((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
-        if (selectedOrder?.id === updated.id) {
-          setSelectedOrder(updated);
+        setActionError('');
+        setOrders((prev) => prev.map((o) => (o.id === data.id ? data : o)));
+        if (selectedOrder?.id === data.id) {
+          setSelectedOrder(data);
         }
+      } else {
+        setActionError(data.error || 'No se pudo actualizar el pedido.');
       }
     } catch (e) {
       console.error(e);
@@ -67,20 +98,6 @@ export default function AdminOrdersPage() {
       setUpdating(false);
     }
   };
-
-  const filteredOrders = orders.filter((o) => {
-    if (statusFilter !== 'ALL' && o.status !== statusFilter) return false;
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      return (
-        o.orderNumber.toLowerCase().includes(q) ||
-        o.customerName.toLowerCase().includes(q) ||
-        o.customerEmail.toLowerCase().includes(q) ||
-        o.city.toLowerCase().includes(q)
-      );
-    }
-    return true;
-  });
 
   return (
     <div className="space-y-6">
@@ -142,7 +159,7 @@ export default function AdminOrdersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-boho-sand-100 font-sans">
-              {filteredOrders.map((order) => (
+              {orders.map((order) => (
                 <tr key={order.id} className="hover:bg-boho-sand-50/40 transition-colors">
                   <td className="py-3 px-4">
                     <div className="font-bold text-boho-charcoal">{order.orderNumber}</div>
@@ -163,8 +180,12 @@ export default function AdminOrdersPage() {
                   </td>
 
                   <td className="py-3 px-4">
-                    <span className="text-[11px] font-medium text-[#003087] bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
-                      {order.paymentMethod}
+                    <span className={`text-[11px] font-medium px-2 py-0.5 rounded border ${
+                      order.paymentMethod === 'BIZUM'
+                        ? 'text-[#067a88] bg-[#e6f7f9] border-[#0aa5b7]/30'
+                        : 'text-[#003087] bg-blue-50 border-blue-100'
+                    }`}>
+                      {order.paymentMethod === 'PAYPAL_ME' ? 'PAYPAL' : order.paymentMethod}
                     </span>
                   </td>
 
@@ -204,6 +225,30 @@ export default function AdminOrdersPage() {
         </div>
       </div>
 
+      {/* Pagination */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-boho-charcoal-muted">
+        <span>
+          {loading ? 'Cargando…' : total === 0 ? 'Sin pedidos para este filtro' : `${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, total)} de ${total} pedidos`}
+        </span>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page <= 1}
+            className="px-3.5 py-1.5 rounded-full border border-boho-sand-300 bg-white font-semibold disabled:opacity-40 hover:bg-boho-sand-100"
+          >
+            ← Anterior
+          </button>
+          <span className="font-semibold text-boho-charcoal">Página {page} de {totalPages}</span>
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page >= totalPages}
+            className="px-3.5 py-1.5 rounded-full border border-boho-sand-300 bg-white font-semibold disabled:opacity-40 hover:bg-boho-sand-100"
+          >
+            Siguiente →
+          </button>
+        </div>
+      </div>
+
       {/* Order Detail Drawer Modal */}
       {selectedOrder && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
@@ -234,8 +279,14 @@ export default function AdminOrdersPage() {
               <label className="block text-xs font-bold uppercase tracking-wider text-boho-charcoal">
                 Actualizar Estado de Preparación / Envío
               </label>
+              {(selectedOrder.paymentMethod === 'BIZUM' || selectedOrder.paymentMethod === 'PAYPAL_ME') && selectedOrder.status === 'PENDING' && (
+                <p className="text-[11px] text-amber-700 font-medium">
+                  Pago manual ({selectedOrder.paymentMethod === 'BIZUM' ? 'Bizum' : 'PayPal'}): cuando veas {formatPrice(selectedOrder.totalAmount)} con concepto/nota {selectedOrder.orderNumber}, márcalo como PAID (se avisa al cliente por email).
+                </p>
+              )}
+              {actionError && <p role="alert" className="text-[11px] text-red-600 font-semibold">{actionError}</p>}
               <div className="flex flex-wrap gap-2">
-                {(['PAID', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED'] as OrderStatus[]).map((st) => (
+                {(['PENDING', 'PAID', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED'] as OrderStatus[]).map((st) => (
                   <button
                     key={st}
                     onClick={() => handleUpdateStatus(selectedOrder.id, st)}
