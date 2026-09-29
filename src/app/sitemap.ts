@@ -1,6 +1,8 @@
 import { MetadataRoute } from 'next';
 import { storeService } from '@/lib/storeService';
 
+export const dynamic = 'force-dynamic';
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://bohoartjoyeria.com';
   const products = await storeService.getProducts();
@@ -59,5 +61,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.85,
   }));
 
-  return [...staticRoutes, ...categoryRoutes, ...productRoutes];
+  // Only live collections are indexable.
+  const collectionRoutes: MetadataRoute.Sitemap = (await storeService.getCollections())
+    .filter((c) => c.status === 'live')
+    .map((c) => ({
+      url: `${baseUrl}/colecciones/${c.slug}`,
+      lastModified: new Date(),
+      changeFrequency: 'daily',
+      priority: 0.85,
+    }));
+
+  return [...staticRoutes, ...collectionRoutes, ...categoryRoutes, ...productRoutes];
 }

@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Plus, Edit2, Trash2, Layers, X, Sparkles } from 'lucide-react';
 import { Category } from '@/lib/types';
 import { slugify } from '@/lib/utils';
+import { ImageUploader } from '@/components/admin/ImageUploader';
 
 export default function AdminCategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -17,6 +18,8 @@ export default function AdminCategoriesPage() {
   const [image, setImage] = useState('');
   const [sortOrder, setSortOrder] = useState('0');
   const [loading, setLoading] = useState(true);
+  const [formError, setFormError] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const fetchCategories = async () => {
     try {
@@ -41,8 +44,9 @@ export default function AdminCategoriesPage() {
     setName('');
     setSlug('');
     setDescription('');
-    setImage('https://images.unsplash.com/photo-1630019852942-f89202989a59?w=800&auto=format&fit=crop&q=80');
+    setImage('');
     setSortOrder('0');
+    setFormError('');
     setIsModalOpen(true);
   };
 
@@ -53,6 +57,7 @@ export default function AdminCategoriesPage() {
     setDescription(cat.description || '');
     setImage(cat.image || '');
     setSortOrder(String(cat.sortOrder || 0));
+    setFormError('');
     setIsModalOpen(true);
   };
 
@@ -69,34 +74,48 @@ export default function AdminCategoriesPage() {
         sortOrder: parseInt(sortOrder, 10) || 0,
       };
 
-      if (editingCategory) {
-        await fetch(`/api/categories/${editingCategory.id}`, {
-          method: 'PUT',
+      setSaving(true);
+      const res = await fetch(
+        editingCategory ? `/api/categories/${editingCategory.id}` : '/api/categories',
+        {
+          method: editingCategory ? 'PUT' : 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
-        });
-      } else {
-        await fetch('/api/categories', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
+        }
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setFormError(
+          res.status === 401
+            ? 'Tu sesión ha caducado. Vuelve a iniciar sesión.'
+            : data.error || 'No se pudo guardar la categoría.'
+        );
+        return;
       }
 
       setIsModalOpen(false);
       fetchCategories();
     } catch (err) {
       console.error(err);
+      setFormError('Error de conexión con el servidor.');
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm('¿Eliminar esta categoría?')) return;
     try {
-      await fetch(`/api/categories/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/categories/${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || 'No se pudo eliminar la categoría.');
+        return;
+      }
       fetchCategories();
     } catch (err) {
       console.error(err);
+      alert('Error de conexión con el servidor.');
     }
   };
 
@@ -218,18 +237,11 @@ export default function AdminCategoriesPage() {
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-boho-charcoal mb-1">
-                  Imagen de Portada (URL)
-                </label>
-                <input
-                  type="text"
-                  value={image}
-                  onChange={(e) => setImage(e.target.value)}
-                  placeholder="https://images.unsplash.com/..."
-                  className="w-full px-3.5 py-2 text-xs bg-boho-sand-50 border border-boho-sand-300 rounded-xl focus:outline-none focus:border-boho-terracotta"
-                />
-              </div>
+              <ImageUploader
+                label="Imagen de portada"
+                value={image ? [image] : []}
+                onChange={(urls) => setImage(urls[0] || '')}
+              />
 
               <div>
                 <label className="block text-xs font-semibold text-boho-charcoal mb-1">
@@ -244,6 +256,12 @@ export default function AdminCategoriesPage() {
                 />
               </div>
 
+              {formError && (
+                <p role="alert" className="text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-xl px-3.5 py-2">
+                  {formError}
+                </p>
+              )}
+
               <div className="flex justify-end space-x-3 pt-4 border-t border-boho-sand-200">
                 <button
                   type="button"
@@ -254,9 +272,10 @@ export default function AdminCategoriesPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 bg-boho-terracotta hover:bg-boho-terracotta-600 text-white rounded-full text-xs font-bold shadow-soft transition-colors"
+                  disabled={saving}
+                  className="px-6 py-2.5 bg-boho-terracotta hover:bg-boho-terracotta-600 text-white rounded-full text-xs font-bold shadow-soft transition-colors disabled:opacity-60"
                 >
-                  Guardar Categoría
+                  {saving ? 'Guardando...' : 'Guardar Categoría'}
                 </button>
               </div>
             </form>

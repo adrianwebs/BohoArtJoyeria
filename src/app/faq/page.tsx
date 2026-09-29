@@ -31,7 +31,7 @@ const FAQS = [
   },
   {
     q: '¿Puedo solicitar un diseño o color personalizado para un evento o boda?',
-    a: '¡Por supuesto! Nos encanta crear piezas a medida para novias, damas de honor o looks de invitada. Escríbenos a hola@bohoartjoyeria.com o por mensaje directo en nuestro Instagram @bohoartjewelry.',
+    a: '¡Por supuesto! Nos encanta crear piezas a medida para novias, damas de honor o looks de invitada. Escríbenos a hola@bohoartjoyeria.com o por mensaje directo en nuestro Instagram @bohoart.jewelry.',
   },
 ];
 

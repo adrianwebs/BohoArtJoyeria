@@ -20,14 +20,15 @@ export default async function MaintenancePage() {
 
       {/* Top Bar with brand logo (centered) */}
       <div className="max-w-4xl mx-auto w-full flex justify-center items-center relative z-10">
-        <div className="flex items-center space-x-3">
-          <div className="relative w-14 h-14 rounded-full overflow-hidden border-2 border-boho-terracotta/40 shadow-soft">
+        <div className="flex items-center space-x-4">
+          <div className="relative w-24 h-24 sm:w-28 sm:h-28 shrink-0">
             <Image
               src="/logo.png"
               alt="Bohoart Jewelry Logo"
               fill
-              className="object-cover"
+              className="object-contain"
               priority
+              unoptimized
             />
           </div>
           <div>
@@ -78,13 +79,13 @@ export default async function MaintenancePage() {
 
             <div className="flex flex-wrap items-center justify-center gap-3">
               <a
-                href={settings.instagramUrl || 'https://instagram.com/bohoartjewelry'}
+                href={settings.instagramUrl || 'https://instagram.com/bohoart.jewelry'}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center space-x-2 px-6 py-3 bg-boho-terracotta hover:bg-boho-terracotta-600 text-white rounded-full text-xs font-bold transition-all shadow-md active:scale-95"
               >
                 <Instagram className="w-4 h-4" />
-                <span>@bohoartjewelry en Instagram</span>
+                <span>@bohoart.jewelry en Instagram</span>
               </a>
 
               <a

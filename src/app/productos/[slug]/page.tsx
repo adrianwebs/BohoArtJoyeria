@@ -76,11 +76,14 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
         ? 'https://schema.org/InStock'
         : 'https://schema.org/OutOfStock',
     },
-    aggregateRating: {
-      '@type': 'AggregateRating',
-      ratingValue: product.rating || 5,
-      reviewCount: reviews.length || 1,
-    },
+    // Only declare ratings that exist: fabricated ratings violate Google's structured-data guidelines.
+    ...(reviews.length > 0 && {
+      aggregateRating: {
+        '@type': 'AggregateRating',
+        ratingValue: product.rating || 5,
+        reviewCount: reviews.length,
+      },
+    }),
   };
 
   return (

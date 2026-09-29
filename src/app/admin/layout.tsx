@@ -23,6 +23,7 @@ const ADMIN_NAV = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
   { name: 'Productos & Joyas', href: '/admin/productos', icon: Package },
   { name: 'Categorías', href: '/admin/categorias', icon: Layers },
+  { name: 'Colecciones & Landings', href: '/admin/colecciones', icon: Sparkles },
   { name: 'Pedidos & Ventas', href: '/admin/pedidos', icon: ShoppingBag },
   { name: 'Clientes', href: '/admin/clientes', icon: Users },
   { name: 'Reseñas & Reviews', href: '/admin/reviews', icon: Star },
@@ -80,12 +81,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div>
           {/* Brand header */}
           <div className="p-6 border-b border-boho-sand-200 flex items-center space-x-3">
-            <div className="relative w-10 h-10 rounded-full overflow-hidden border border-boho-terracotta shrink-0">
+            <div className="relative w-14 h-14 shrink-0">
               <Image
                 src="/logo.png"
                 alt="Bohoart Logo"
                 fill
-                className="object-cover"
+                className="object-contain"
+                unoptimized
               />
             </div>
             <div>

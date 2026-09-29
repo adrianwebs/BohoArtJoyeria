@@ -10,8 +10,11 @@ export default function AdminSettingsPage() {
   const [freeShippingThreshold, setFreeShippingThreshold] = useState('40.00');
   const [standardShippingCost, setStandardShippingCost] = useState('3.95');
   const [paypalClientId, setPaypalClientId] = useState('sb');
+  const [bizumPhone, setBizumPhone] = useState('');
+  const [paypalMeUrl, setPaypalMeUrl] = useState('');
+  const [saveError, setSaveError] = useState('');
   const [contactEmail, setContactEmail] = useState('hola@bohoartjoyeria.com');
-  const [instagramUrl, setInstagramUrl] = useState('https://instagram.com/bohoartjewelry');
+  const [instagramUrl, setInstagramUrl] = useState('https://instagram.com/bohoart.jewelry');
   
   // Maintenance states
   const [maintenanceMode, setMaintenanceMode] = useState(false);
@@ -32,8 +35,10 @@ export default function AdminSettingsPage() {
         setFreeShippingThreshold(String(data.freeShippingThreshold || '40.00'));
         setStandardShippingCost(String(data.standardShippingCost || '3.95'));
         setPaypalClientId(data.paypalClientId || 'sb');
+        setBizumPhone(data.bizumPhone || '');
+        setPaypalMeUrl(data.paypalMeUrl || '');
         setContactEmail(data.contactEmail || 'hola@bohoartjoyeria.com');
-        setInstagramUrl(data.instagramUrl || 'https://instagram.com/bohoartjewelry');
+        setInstagramUrl(data.instagramUrl || 'https://instagram.com/bohoart.jewelry');
         setMaintenanceMode(Boolean(data.maintenanceMode));
         setMaintenanceAllowedIps(data.maintenanceAllowedIps || '127.0.0.1, ::1');
         if (data.maintenanceTitle) setMaintenanceTitle(data.maintenanceTitle);
@@ -60,7 +65,8 @@ export default function AdminSettingsPage() {
           announcementText,
           freeShippingThreshold: parseFloat(freeShippingThreshold),
           standardShippingCost: parseFloat(standardShippingCost),
-          paypalClientId,
+          bizumPhone: bizumPhone.trim() || null,
+          paypalMeUrl: paypalMeUrl.trim() || null,
           contactEmail,
           instagramUrl,
           maintenanceMode,
@@ -71,8 +77,12 @@ export default function AdminSettingsPage() {
       });
 
       if (res.ok) {
+        setSaveError('');
         setSaved(true);
         setTimeout(() => setSaved(false), 3000);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setSaveError(data.error || 'No se pudo guardar la configuración.');
       }
     } catch (e) {
       console.error(e);
@@ -94,6 +104,12 @@ export default function AdminSettingsPage() {
           Configuración de la Tienda Online
         </h1>
       </div>
+
+      {saveError && (
+        <div role="alert" className="p-4 bg-red-50 text-red-700 rounded-2xl border border-red-200 text-xs font-medium">
+          {saveError}
+        </div>
+      )}
 
       {saved && (
         <div className="p-4 bg-emerald-50 text-emerald-800 rounded-2xl border border-emerald-200 flex items-center space-x-2 text-xs font-medium animate-slide-down">
@@ -281,26 +297,46 @@ export default function AdminSettingsPage() {
           </div>
         </div>
 
-        {/* Section 3: Integración de PayPal */}
-        <div className="bg-white p-6 sm:p-8 rounded-3xl border border-boho-sand-200 shadow-soft space-y-4">
+        {/* Section 3: Métodos de pago */}
+        <div className="bg-white p-6 sm:p-8 rounded-3xl border border-boho-sand-200 shadow-soft space-y-5">
           <h3 className="font-serif-boho text-lg font-bold text-boho-charcoal flex items-center space-x-2">
             <CreditCard className="w-4 h-4 text-[#003087]" />
-            <span>Pasarela de Pago PayPal</span>
+            <span>Métodos de Pago</span>
           </h3>
 
+          <p className="text-xs text-boho-charcoal-muted">
+            Los pagos se comprueban a mano: el cliente hace el pedido (queda como <b>PENDING</b>), paga por el método elegido y,
+            cuando veas el dinero, lo marcas como <b>PAID</b> en Pedidos (se avisa al cliente por email). Deja un campo vacío para
+            desactivar ese método.
+          </p>
+
           <div>
-            <label className="block text-xs font-semibold text-boho-charcoal mb-1">
-              PayPal Client ID (Sandbox o Live)
-            </label>
+            <label className="block text-xs font-semibold text-boho-charcoal mb-1">Enlace PayPal.Me</label>
             <input
-              type="text"
-              value={paypalClientId}
-              onChange={(e) => setPaypalClientId(e.target.value)}
-              placeholder="sb (o tu client ID de PayPal Developer)"
+              type="url"
+              value={paypalMeUrl}
+              onChange={(e) => setPaypalMeUrl(e.target.value)}
+              placeholder="https://www.paypal.me/tu-usuario"
               className="w-full px-3.5 py-2.5 text-xs bg-boho-sand-50 border border-boho-sand-300 rounded-xl focus:outline-none focus:border-boho-terracotta"
             />
             <span className="text-[11px] text-boho-charcoal-muted mt-1 block">
-              Usa <code>sb</code> para pruebas locales sandbox o tu clave oficial de PayPal para producción.
+              Al cliente se le muestra este enlace con el importe del pedido ya rellenado.
+            </span>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-boho-charcoal mb-1">
+              Teléfono para recibir Bizum
+            </label>
+            <input
+              type="tel"
+              value={bizumPhone}
+              onChange={(e) => setBizumPhone(e.target.value)}
+              placeholder="+34 600 000 000"
+              className="w-full px-3.5 py-2.5 text-xs bg-boho-sand-50 border border-boho-sand-300 rounded-xl focus:outline-none focus:border-boho-terracotta"
+            />
+            <span className="text-[11px] text-boho-charcoal-muted mt-1 block">
+              Se muestra al cliente para que envíe el Bizum con el nº de pedido como concepto.
             </span>
           </div>
         </div>
@@ -335,7 +371,7 @@ export default function AdminSettingsPage() {
                 required
                 value={instagramUrl}
                 onChange={(e) => setInstagramUrl(e.target.value)}
-                placeholder="https://instagram.com/bohoartjewelry"
+                placeholder="https://instagram.com/bohoart.jewelry"
                 className="w-full px-3.5 py-2.5 text-xs bg-boho-sand-50 border border-boho-sand-300 rounded-xl focus:outline-none focus:border-boho-terracotta"
               />
             </div>

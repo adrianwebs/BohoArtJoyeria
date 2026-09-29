@@ -12,6 +12,11 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'plus.unsplash.com',
       },
+      // Admin-provided image URLs can point to any HTTPS host (Instagram CDN, Cloudinary, etc.)
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
     ],
   },
 };

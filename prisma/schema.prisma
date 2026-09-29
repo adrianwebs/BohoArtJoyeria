@@ -54,6 +54,7 @@ model Product {
   updatedAt        DateTime    @updatedAt
   orderItems       OrderItem[]
   reviews          Review[]
+  collections      CollectionProduct[]
 }
 
 model Order {
@@ -96,8 +97,8 @@ model OrderItem {
 
 model Review {
   id              String   @id @default(uuid())
-  productId       String
-  product         Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId       String? // null = general store review
+  product         Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
   authorName      String
   authorEmail     String
   rating          Int      @default(5)
@@ -118,10 +119,42 @@ model StoreSetting {
   standardShippingCost  Decimal  @default(3.95) @db.Decimal(10, 2)
   paypalClientId        String?
   contactEmail          String   @default("hola@bohoartjoyeria.com")
-  instagramUrl          String   @default("https://instagram.com/bohoartjewelry")
+  instagramUrl          String   @default("https://instagram.com/bohoart.jewelry")
+  bizumPhone            String?
+  paypalMeUrl           String?
   maintenanceMode       Boolean  @default(false)
   maintenanceAllowedIps String?  @db.NVarChar(Max)
   maintenanceTitle      String?  @default("✨ Estamos horneando novedades en el taller ✨")
   maintenanceMessage    String?  @db.NVarChar(Max)
   updatedAt             DateTime @updatedAt
+}
+
+// Seasonal / themed landings (Feria de Albacete, Virgen del Pilar, Halloween, Navidad...)
+model Collection {
+  id           String              @id @default(uuid())
+  name         String
+  slug         String              @unique
+  tagline      String?
+  description  String?             @db.NVarChar(Max)
+  heroImage    String?             @db.NVarChar(Max)
+  accentColor  String              @default("#C2694F")
+  startsAt     DateTime?
+  endsAt       DateTime?
+  repeatYearly Boolean             @default(false)
+  isActive     Boolean             @default(true)
+  showOnHome   Boolean             @default(true)
+  sortOrder    Int                 @default(0)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  products     CollectionProduct[]
+}
+
+model CollectionProduct {
+  collectionId String
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  productId    String
+  product      Product    @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sortOrder    Int        @default(0)
+
+  @@id([collectionId, productId])
 }

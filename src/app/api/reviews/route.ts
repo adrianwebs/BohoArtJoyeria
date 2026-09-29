@@ -1,17 +1,22 @@
 import { NextResponse } from 'next/server';
 import { storeService } from '@/lib/storeService';
+import { getCurrentAdmin } from '@/lib/auth';
+import { apiError } from '@/lib/apiError';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const productId = searchParams.get('productId') || undefined;
-  const all = searchParams.get('all') === 'true';
+  try {
+    const { searchParams } = new URL(req.url);
+    const productId = searchParams.get('productId') || undefined;
+    // Only admins may list unapproved reviews.
+    const all = searchParams.get('all') === 'true' && Boolean(await getCurrentAdmin());
 
-  const reviews = await storeService.getReviews({
-    productId,
-    approvedOnly: !all,
-  });
-
-  return NextResponse.json(reviews);
+    const reviews = await storeService.getReviews({ productId, approvedOnly: !all });
+    return NextResponse.json(reviews);
+  } catch (error) {
+    return apiError(error, 'Error al cargar las reseñas');
+  }
 }
 
 export async function POST(req: Request) {
@@ -30,12 +35,11 @@ export async function POST(req: Request) {
       rating: Number(body.rating) || 5,
       title: body.title || null,
       comment: body.comment,
-      isVerifiedBuyer: Boolean(body.isVerifiedBuyer),
+      isVerifiedBuyer: false,
     });
 
     return NextResponse.json(review, { status: 201 });
   } catch (error) {
-    console.error('Error creating review:', error);
-    return NextResponse.json({ error: 'Error al enviar la reseña' }, { status: 500 });
+    return apiError(error, 'Error al enviar la reseña');
   }
 }

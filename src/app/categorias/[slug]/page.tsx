@@ -28,10 +28,41 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
 
   const products = await storeService.getProducts({ categorySlug: slug });
 
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://bohoartjoyeria.com';
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Inicio', item: baseUrl },
+          { '@type': 'ListItem', position: 2, name: 'Catálogo', item: `${baseUrl}/catalogo` },
+          { '@type': 'ListItem', position: 3, name: category.name, item: `${baseUrl}/categorias/${category.slug}` },
+        ],
+      },
+      {
+        '@type': 'CollectionPage',
+        name: category.name,
+        description: category.description || undefined,
+        url: `${baseUrl}/categorias/${category.slug}`,
+        mainEntity: {
+          '@type': 'ItemList',
+          itemListElement: products.map((p, i) => ({
+            '@type': 'ListItem',
+            position: i + 1,
+            url: `${baseUrl}/productos/${p.slug}`,
+            name: p.name,
+          })),
+        },
+      },
+    ],
+  };
+
   return (
     <div className="bg-boho-linen min-h-screen py-10">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
+
         {/* Breadcrumb */}
         <nav className="flex items-center space-x-2 text-xs text-boho-charcoal-muted mb-6">
           <Link href="/" className="hover:text-boho-terracotta transition-colors">

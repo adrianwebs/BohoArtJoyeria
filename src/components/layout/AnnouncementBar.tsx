@@ -11,7 +11,7 @@ interface AnnouncementBarProps {
 
 export function AnnouncementBar({
   text = "✨ Envíos gratis a toda España a partir de 40€ | Diseños únicos hechos a mano con amor ✨",
-  instagramUrl = "https://instagram.com/bohoartjewelry"
+  instagramUrl = "https://instagram.com/bohoart.jewelry"
 }: AnnouncementBarProps) {
   return (
     <div className="bg-boho-charcoal text-boho-sand-100 text-xs py-2 px-4 font-medium transition-all">
@@ -35,7 +35,7 @@ export function AnnouncementBar({
             title="Síguenos en Instagram"
           >
             <Instagram className="w-3.5 h-3.5" />
-            <span>@bohoartjewelry</span>
+            <span>@bohoart.jewelry</span>
           </a>
         </div>
       </div>

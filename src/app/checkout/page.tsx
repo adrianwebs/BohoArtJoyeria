@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -20,14 +20,46 @@ export default function CheckoutPage() {
   const [postalCode, setPostalCode] = useState('');
   const [province, setProvince] = useState('');
   const [notes, setNotes] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'PAYPAL' | 'CARD_MOCK'>('PAYPAL');
+  const [paymentMethod, setPaymentMethod] = useState<'PAYPAL_ME' | 'BIZUM'>('PAYPAL_ME');
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [payConfig, setPayConfig] = useState<{
+    paypalMeUrl: string | null;
+    bizumPhone: string | null;
+    freeShippingThreshold: number;
+    standardShippingCost: number;
+  } | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
-  const freeShippingThreshold = 40.0;
+  useEffect(() => {
+    fetch('/api/payments/config')
+      .then((r) => r.json())
+      .then((c) => {
+        setPayConfig(c);
+        setPaymentMethod(c.paypalMeUrl ? 'PAYPAL_ME' : 'BIZUM');
+      })
+      .catch(() => setErrorMsg('No se pudo cargar la configuración de pago. Recarga la página.'));
+  }, []);
+
+  const freeShippingThreshold = payConfig?.freeShippingThreshold ?? 40.0;
   const isFreeShipping = subtotal >= freeShippingThreshold;
-  const shippingCost = isFreeShipping ? 0 : 3.95;
+  const shippingCost = isFreeShipping ? 0 : payConfig?.standardShippingCost ?? 3.95;
   const totalAmount = subtotal + shippingCost;
+
+  // Latest form data submitted with the order.
+  const payloadRef = useRef<Record<string, unknown>>({});
+  payloadRef.current = {
+    customerName,
+    customerEmail,
+    customerPhone,
+    shippingAddress,
+    city,
+    postalCode,
+    province: province || city,
+    country: 'España',
+    notes,
+    items: cart.map((item) => ({ productId: item.product.id, quantity: item.quantity })),
+  };
 
   if (cart.length === 0) {
     return (
@@ -50,58 +82,34 @@ export default function CheckoutPage() {
     );
   }
 
-  const handlePlaceOrder = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!customerName || !customerEmail || !shippingAddress || !city || !postalCode) {
-      setErrorMsg('Por favor completa todos los datos obligatorios de envío.');
-      return;
-    }
+  const finishOrder = (orderNumber: string, method: 'PAYPAL_ME' | 'BIZUM') => {
+    clearCart();
+    router.push(
+      `/checkout/exito?orderNumber=${encodeURIComponent(orderNumber)}&email=${encodeURIComponent(customerEmail)}&method=${method}`
+    );
+  };
 
+  const postJson = async (url: string, body: unknown) => {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Ocurrió un error al procesar el pago.');
+    return data;
+  };
+
+  // Manual payments (PayPal.Me / Bizum): the order is created as PENDING; the shop confirms it once the money arrives.
+  const handleManualOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
     setIsProcessing(true);
     setErrorMsg('');
-
     try {
-      const orderPayload = {
-        customerName,
-        customerEmail,
-        customerPhone,
-        shippingAddress,
-        city,
-        postalCode,
-        province: province || city,
-        country: 'España',
-        subtotal,
-        shippingCost,
-        totalAmount,
-        paymentMethod,
-        paypalOrderId: paymentMethod === 'PAYPAL' ? `PAYPAL-SANDBOX-${Date.now()}` : null,
-        status: 'PAID', // In sandbox / test flow it marks as paid immediately
-        notes,
-        items: cart.map((item) => ({
-          productId: item.product.id,
-          productName: item.product.name,
-          productImage: item.product.images[0] || null,
-          unitPrice: item.product.price,
-          quantity: item.quantity,
-        })),
-      };
-
-      const res = await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderPayload),
-      });
-
-      if (!res.ok) {
-        throw new Error('Error al procesar el pedido en el servidor');
-      }
-
-      const createdOrder = await res.json();
-      clearCart();
-      router.push(`/checkout/exito?orderNumber=${createdOrder.orderNumber}&email=${encodeURIComponent(customerEmail)}`);
+      const data = await postJson('/api/orders', { ...payloadRef.current, paymentMethod });
+      finishOrder(data.orderNumber, paymentMethod);
     } catch (err: any) {
-      console.error(err);
-      setErrorMsg(err.message || 'Ocurrió un error inesperado al tramitar tu pedido.');
+      setErrorMsg(err.message);
       setIsProcessing(false);
     }
   };
@@ -124,7 +132,7 @@ export default function CheckoutPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
           
           {/* Form Column */}
-          <form onSubmit={handlePlaceOrder} className="lg:col-span-7 space-y-8">
+          <form ref={formRef} onSubmit={handleManualOrder} className="lg:col-span-7 space-y-8">
             
             {/* Step 1: Datos de Contacto & Envío */}
             <div className="bg-white p-6 sm:p-8 rounded-3xl border border-boho-sand-200 shadow-soft space-y-5">
@@ -259,7 +267,7 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            {/* Step 2: Método de Pago (PayPal & Tarjeta) */}
+            {/* Step 2: Método de Pago (PayPal / Bizum, confirmación manual) */}
             <div className="bg-white p-6 sm:p-8 rounded-3xl border border-boho-sand-200 shadow-soft space-y-5">
               <div className="flex items-center justify-between pb-3 border-b border-boho-sand-200">
                 <h2 className="font-serif-boho text-xl font-bold text-boho-charcoal flex items-center space-x-2">
@@ -274,83 +282,88 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              <div className="space-y-3">
-                {/* PayPal option */}
-                <label
-                  onClick={() => setPaymentMethod('PAYPAL')}
-                  className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition-all ${
-                    paymentMethod === 'PAYPAL'
-                      ? 'border-boho-terracotta bg-boho-sand-50/80 shadow-soft'
-                      : 'border-boho-sand-300 hover:border-boho-sand-400 bg-white'
-                  }`}
-                >
-                  <div className="flex items-center space-x-3">
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      checked={paymentMethod === 'PAYPAL'}
-                      onChange={() => setPaymentMethod('PAYPAL')}
-                      className="text-boho-terracotta focus:ring-boho-terracotta"
-                    />
-                    <div>
-                      <span className="font-bold text-xs text-boho-charcoal block">
-                        PayPal (Saldo, Tarjeta o Pago en 3 plazos)
-                      </span>
-                      <span className="text-[11px] text-boho-charcoal-muted">
-                        Paga de forma rápida y 100% segura con tu cuenta de PayPal o tarjeta asociada.
-                      </span>
-                    </div>
-                  </div>
-                  <span className="text-xs font-extrabold text-[#003087] bg-white px-2.5 py-1 rounded-lg border border-boho-sand-300 shadow-xs">
-                    PayPal
-                  </span>
-                </label>
+              {payConfig && !payConfig.paypalMeUrl && !payConfig.bizumPhone && (
+                <div className="p-3.5 bg-amber-50 text-amber-800 text-xs rounded-xl border border-amber-200">
+                  El pago online no está disponible ahora mismo. Escríbenos y te ayudamos con tu pedido.
+                </div>
+              )}
 
-                {/* Card option */}
-                <label
-                  onClick={() => setPaymentMethod('CARD_MOCK')}
-                  className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition-all ${
-                    paymentMethod === 'CARD_MOCK'
-                      ? 'border-boho-terracotta bg-boho-sand-50/80 shadow-soft'
-                      : 'border-boho-sand-300 hover:border-boho-sand-400 bg-white'
-                  }`}
-                >
-                  <div className="flex items-center space-x-3">
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      checked={paymentMethod === 'CARD_MOCK'}
-                      onChange={() => setPaymentMethod('CARD_MOCK')}
-                      className="text-boho-terracotta focus:ring-boho-terracotta"
-                    />
-                    <div>
-                      <span className="font-bold text-xs text-boho-charcoal block">
-                        Tarjeta de Débito / Crédito
-                      </span>
-                      <span className="text-[11px] text-boho-charcoal-muted">
-                        Visa, Mastercard, Maestro y Bizum.
-                      </span>
+              <div className="space-y-3">
+                {payConfig?.paypalMeUrl && (
+                  <label
+                    onClick={() => setPaymentMethod('PAYPAL_ME')}
+                    className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition-all ${
+                      paymentMethod === 'PAYPAL_ME'
+                        ? 'border-boho-terracotta bg-boho-sand-50/80 shadow-soft'
+                        : 'border-boho-sand-300 hover:border-boho-sand-400 bg-white'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        checked={paymentMethod === 'PAYPAL_ME'}
+                        onChange={() => setPaymentMethod('PAYPAL_ME')}
+                        className="text-boho-terracotta focus:ring-boho-terracotta"
+                      />
+                      <div>
+                        <span className="font-bold text-xs text-boho-charcoal block">PayPal</span>
+                        <span className="text-[11px] text-boho-charcoal-muted">
+                          Haz el pedido y te damos el enlace para pagar por PayPal. Lo preparamos en cuanto recibimos el pago.
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                  <span className="text-[10px] text-boho-charcoal-muted uppercase tracking-wider font-semibold">
-                    Visa / MC
-                  </span>
-                </label>
+                    <span className="text-xs font-extrabold text-[#003087] bg-white px-2.5 py-1 rounded-lg border border-boho-sand-300 shadow-xs">
+                      PayPal
+                    </span>
+                  </label>
+                )}
+
+                {payConfig?.bizumPhone && (
+                  <label
+                    onClick={() => setPaymentMethod('BIZUM')}
+                    className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition-all ${
+                      paymentMethod === 'BIZUM'
+                        ? 'border-boho-terracotta bg-boho-sand-50/80 shadow-soft'
+                        : 'border-boho-sand-300 hover:border-boho-sand-400 bg-white'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        checked={paymentMethod === 'BIZUM'}
+                        onChange={() => setPaymentMethod('BIZUM')}
+                        className="text-boho-terracotta focus:ring-boho-terracotta"
+                      />
+                      <div>
+                        <span className="font-bold text-xs text-boho-charcoal block">Bizum</span>
+                        <span className="text-[11px] text-boho-charcoal-muted">
+                          Haz el pedido y envía el importe por Bizum. Lo preparamos en cuanto lo recibimos.
+                        </span>
+                      </div>
+                    </div>
+                    <span className="text-xs font-extrabold text-white bg-[#0aa5b7] px-2.5 py-1 rounded-lg">
+                      bizum
+                    </span>
+                  </label>
+                )}
               </div>
 
-              {/* Submit CTA */}
               <div className="pt-4">
-                <button
-                  type="submit"
-                  disabled={isProcessing}
-                  className="w-full py-4 px-6 bg-boho-terracotta hover:bg-boho-terracotta-600 text-white rounded-full font-bold text-sm shadow-md flex items-center justify-center space-x-2 transition-all disabled:opacity-50"
-                >
-                  {isProcessing ? (
-                    <span>Procesando pago seguro...</span>
-                  ) : (
-                    <span>Confirmar y Pagar {formatPrice(totalAmount)} con {paymentMethod === 'PAYPAL' ? 'PayPal' : 'Tarjeta'}</span>
-                  )}
-                </button>
+                {((paymentMethod === 'BIZUM' && payConfig?.bizumPhone) || (paymentMethod === 'PAYPAL_ME' && payConfig?.paypalMeUrl)) && (
+                  <button
+                    type="submit"
+                    disabled={isProcessing}
+                    className="w-full py-4 px-6 bg-boho-terracotta hover:bg-boho-terracotta-600 text-white rounded-full font-bold text-sm shadow-md flex items-center justify-center space-x-2 transition-all disabled:opacity-50"
+                  >
+                    <span>
+                      {isProcessing
+                        ? 'Creando pedido...'
+                        : `Hacer pedido (${formatPrice(totalAmount)}) y pagar por ${paymentMethod === 'BIZUM' ? 'Bizum' : 'PayPal'}`}
+                    </span>
+                  </button>
+                )}
               </div>
             </div>
 

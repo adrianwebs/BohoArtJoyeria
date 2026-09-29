@@ -146,13 +146,14 @@ export function HeroBanner() {
 
               {/* Floating Bottom Brand Card */}
               <div className="absolute bottom-5 inset-x-5 bg-white/95 backdrop-blur-md p-3.5 sm:p-4 rounded-2xl border border-boho-sand-200 shadow-elevated flex items-center space-x-3 transition-transform duration-300 hover:scale-[1.02]">
-                <div className="relative w-12 h-12 rounded-full overflow-hidden shrink-0 border-2 border-boho-terracotta shadow-sm">
+                <div className="relative w-16 h-16 sm:w-20 sm:h-20 shrink-0">
                   <Image
                     src="/logo.png"
                     alt="Bohoart Logo"
                     fill
-                    sizes="48px"
-                    className="object-cover"
+                    sizes="80px"
+                    className="object-contain"
+                    unoptimized
                   />
                 </div>
                 <div className="flex-1 min-w-0">

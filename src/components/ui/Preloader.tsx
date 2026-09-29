@@ -61,17 +61,16 @@ export function Preloader() {
           <div className="absolute -inset-1.5 rounded-full bg-gradient-to-tr from-boho-terracotta/30 to-boho-gold/30 blur-sm animate-pulse-subtle" />
 
           {/* Logo container */}
-          <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden border-2 border-boho-terracotta bg-white p-1 shadow-elevated">
-            <div className="relative w-full h-full rounded-full overflow-hidden">
-              <Image
-                src="/logo.png"
-                alt="Bohoart Jewelry"
-                fill
-                sizes="96px"
-                className="object-cover"
-                priority
-              />
-            </div>
+          <div className="relative w-28 h-28 sm:w-36 sm:h-36">
+            <Image
+              src="/logo.png"
+              alt="Bohoart Jewelry"
+              fill
+              sizes="144px"
+              className="object-contain drop-shadow-elevated"
+              priority
+              unoptimized
+            />
           </div>
 
           {/* Sparkle badge */}

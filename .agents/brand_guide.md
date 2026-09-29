@@ -3,7 +3,7 @@
 ## 1. Visión y Propuesta de Valor
 - **Nombre de Marca**: Bohoart Jewelry
 - **Dominio Principal**: `https://bohoartjoyeria.com` (con alias `bohoartjewelry.com`)
-- **Instagram**: `@bohoartjewelry`
+- **Instagram**: `@bohoart.jewelry`
 - **Lema**: *Joyería artesanal en arcilla polimérica. Diseños únicos, creados a mano con amor y detalle.*
 - **Valores**: Artesanía auténtica, ligereza (joyas ultraligeras que no pesan en la oreja), hipoalergénico (fornituras en acero inoxidable / plata 925), sostenibilidad y elegancia bohemia contemporánea.
 
