@@ -24,7 +24,14 @@ ENV NODE_ENV=production
 
 RUN npm run build
 
-# 4. Runner stage
+# 4. Prisma CLI in isolation: the CLI needs its own dependency tree (effect, @prisma/config...), which the
+#    Next standalone output does not include. Keep the version in sync with "prisma" in package.json.
+FROM base AS prisma-cli
+ARG PRISMA_VERSION=6.19.3
+WORKDIR /opt/prisma-cli
+RUN npm init -y >/dev/null && npm install prisma@${PRISMA_VERSION} --no-audit --no-fund
+
+# 5. Runner stage
 FROM base AS runner
 WORKDIR /app
 
@@ -44,8 +51,10 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/scripts ./scripts
 COPY --chown=nextjs:nodejs docker-entrypoint.sh ./docker-entrypoint.sh
 
-# Prisma CLI + engines + client and bcryptjs, needed at container start to create tables and seed defaults
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+# Prisma CLI (own node_modules) used by the entrypoint to create the database/tables
+COPY --from=prisma-cli /opt/prisma-cli /opt/prisma-cli
+
+# Prisma client + bcryptjs, needed by scripts/seed.mjs at container start
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/bcryptjs ./node_modules/bcryptjs
