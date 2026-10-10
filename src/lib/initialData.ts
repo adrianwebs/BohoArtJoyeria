@@ -53,7 +53,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     id: 'prod-1',
     name: 'Pendientes Terracota Arch Boho',
     slug: 'pendientes-terracota-arch-boho',
-    description: `Nuestros **Pendientes Terracota Arch Boho** son el icono de nuestra colección artesanal. Esculpidos a mano en arcilla polimérica de tonalidad terracota cálida con arco colgante texturizado y perno superior esmaltado en tono arena.\n\n### ✨ Características Principales:\n- **100% Hechos a Mano**: Cada par es único, cortado, horneado y pulido minuciosamente en nuestro taller.\n- **Ultraligeros**: Menos de 4 gramos de peso por pendiente. No notarás que los llevas puestos durante todo el día.\n- **Hipoalergénicos**: Pernos y cierres de acero inoxidable quirúrgico 316L con baño dorado de alta durabilidad.\n- **Resistentes al agua**: La arcilla polimérica cocida es flexible, duradera e impermeable.\n\n### 🌿 Consejos de Cuidado:\nGuardar en un lugar seco y evitar aplicar perfumes o lacas directamente sobre la pieza. Para limpiarlos, basta con pasar un paño suave húmedo con un poco de agua o alcohol suave.`,
+    description: `Nuestros **Pendientes Terracota Arch Boho** son el icono de nuestra colección artesanal. Esculpidos a mano en arcilla polimérica de tonalidad terracota cálida con arco colgante texturizado y perno superior esmaltado en tono arena.\n\n### ✨ Características Principales:\n- **100% Hechos a Mano**: Cada par es único, cortado, horneado y pulido minuciosamente a mano.\n- **Ultraligeros**: Menos de 4 gramos de peso por pendiente. No notarás que los llevas puestos durante todo el día.\n- **Hipoalergénicos**: Pernos y cierres de acero inoxidable quirúrgico 316L con baño dorado de alta durabilidad.\n- **Resistentes al agua**: La arcilla polimérica cocida es flexible, duradera e impermeable.\n\n### 🌿 Consejos de Cuidado:\nGuardar en un lugar seco y evitar aplicar perfumes o lacas directamente sobre la pieza. Para limpiarlos, basta con pasar un paño suave húmedo con un poco de agua o alcohol suave.`,
     shortDescription: 'Pendientes en forma de arco bohemio en terracota y arena. Ultraligeros con acero hipoalergénico.',
     price: 24.90,
     comparePrice: 29.90,
@@ -202,7 +202,7 @@ export const INITIAL_PRODUCTS: Product[] = [
   },
   {
     id: 'prod-7',
-    name: 'Pack Regalo Taller Bohoart (Pendientes + Pulsera)',
+    name: 'Pack Regalo Exclusivo Bohoart (Pendientes + Pulsera)',
     slug: 'pack-regalo-taller-bohoart',
     description: `El pack más especial para regalar (o autoregalarte). Incluye nuestros Pendientes Terracota Arch Boho y la Pulsera Ajustable de Cuentas, presentados en una exclusiva caja artesanal con saquito de lino natural, tarjeta dedicatoria y flores secas preservadas.`,
     shortDescription: 'Caja regalo completa con pendientes arch, pulsera artesanal y packaging de lino.',
@@ -427,6 +427,6 @@ export const INITIAL_SETTINGS: StoreSetting = {
   instagramUrl: 'https://instagram.com/bohoart.jewelry',
   maintenanceMode: false,
   maintenanceAllowedIps: '127.0.0.1, ::1',
-  maintenanceTitle: '✨ Estamos preparando nuevas joyas en el taller ✨',
+  maintenanceTitle: '✨ Estamos preparando nuevas joyas con mucho mimo ✨',
   maintenanceMessage: 'Nuestra tienda online se encuentra en mantenimiento durante unas horas para añadir nuevas colecciones artesanales en arcilla polimérica. ¡Volvemos muy pronto!',
 };

@@ -18,15 +18,17 @@ export default async function CollectionsIndexPage() {
   const live = collections.filter((c) => c.status === 'live');
   const upcoming = collections.filter((c) => c.status === 'scheduled');
 
-  const Card = ({ c, soon }: { c: (typeof collections)[number]; soon?: boolean }) => (
-    <Link
-      href={`/colecciones/${c.slug}`}
-      className="group relative block aspect-[4/3] rounded-3xl overflow-hidden shadow-soft"
-      style={{ backgroundColor: c.accentColor }}
-    >
-      {c.heroImage && (
-        <Image src={c.heroImage} alt="" fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover group-hover:scale-105 transition-transform duration-500" />
-      )}
+  const Card = ({ c, soon }: { c: (typeof collections)[number]; soon?: boolean }) => {
+    const cover = c.heroImage || (c.products && c.products[0]?.images?.[0]) || null;
+    return (
+      <Link
+        href={`/colecciones/${c.slug}`}
+        className="group relative block aspect-[4/3] rounded-3xl overflow-hidden shadow-soft"
+        style={{ backgroundColor: c.accentColor }}
+      >
+        {cover && (
+          <Image src={cover} alt="" fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover group-hover:scale-105 transition-transform duration-500" />
+        )}
       <div className="absolute inset-0" style={{ background: `linear-gradient(to top, ${c.accentColor}F2, transparent 70%)` }} />
       <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
         {soon && <span className="text-[10px] font-bold uppercase tracking-widest bg-white/25 px-2.5 py-1 rounded-full">Próximamente</span>}
@@ -34,7 +36,8 @@ export default async function CollectionsIndexPage() {
         {c.tagline && <p className="text-sm text-white/90 line-clamp-2">{c.tagline}</p>}
       </div>
     </Link>
-  );
+    );
+  };
 
   return (
     <div className="bg-boho-linen min-h-screen py-12">

@@ -198,7 +198,7 @@ export default function AdminCategoriesPage() {
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm flex items-start justify-center p-4 py-8 sm:py-12">
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-boho-sand-200">
             <div className="flex justify-between items-center pb-4 border-b border-boho-sand-200">
               <h3 className="font-serif-boho text-xl font-bold text-boho-charcoal">

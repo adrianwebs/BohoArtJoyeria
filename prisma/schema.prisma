@@ -124,7 +124,7 @@ model StoreSetting {
   paypalMeUrl           String?
   maintenanceMode       Boolean  @default(false)
   maintenanceAllowedIps String?  @db.NVarChar(Max)
-  maintenanceTitle      String?  @default("✨ Estamos horneando novedades en el taller ✨")
+  maintenanceTitle      String?  @default("✨ Estamos preparando novedades con mucho mimo ✨")
   maintenanceMessage    String?  @db.NVarChar(Max)
   updatedAt             DateTime @updatedAt
 }

@@ -69,7 +69,7 @@ export default function ContactPage() {
                 Instagram Direct
               </h3>
               <p className="text-xs text-boho-charcoal-muted">
-                Escríbenos un DM para dudas rápidas o ver vídeos del taller.
+                Escríbenos un DM para dudas rápidas o ver nuevos diseños.
               </p>
               <a
                 href="https://instagram.com/bohoart.jewelry"
@@ -86,7 +86,7 @@ export default function ContactPage() {
                 <MapPin className="w-5 h-5" />
               </div>
               <h3 className="font-serif-boho text-base font-bold text-boho-charcoal">
-                Taller & Envíos
+                Ubicación & Envíos
               </h3>
               <p className="text-xs text-boho-charcoal-muted">
                 Diseñado y confeccionado en España con envíos a toda la Península y Baleares.

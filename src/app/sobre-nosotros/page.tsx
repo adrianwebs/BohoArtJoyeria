@@ -4,12 +4,19 @@ import Link from 'next/link';
 import { Sparkles, Heart, Feather, Shield, ArrowRight } from 'lucide-react';
 import { Metadata } from 'next';
 
+import { storeService } from '@/lib/storeService';
+import { getProductImagePool } from '@/lib/productImages';
+
 export const metadata: Metadata = {
-  title: 'El Taller Bohoart | Joyería Artesanal Hecha a Mano',
+  title: 'Sobre Nosotros | Bohoart Joyería Artesanal Hecha a Mano',
   description: 'Conoce la historia detrás de Bohoart Jewelry. Creamos joyas y pendientes en arcilla polimérica con dedicación, paciencia y amor en cada detalle.',
 };
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const products = await storeService.getProducts();
+  const imagePool = getProductImagePool(products);
+  const storyImage = imagePool[0] || '/logo.png';
+
   return (
     <div className="bg-boho-linen min-h-screen py-12 md:py-20">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
@@ -32,8 +39,8 @@ export default function AboutPage() {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
           <div className="md:col-span-6 relative aspect-square rounded-3xl overflow-hidden shadow-card border-4 border-white">
             <Image
-              src="https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=800&auto=format&fit=crop&q=80"
-              alt="Proceso artesanal de corte y moldeado en arcilla"
+              src={storyImage}
+              alt="Proceso artesanal de creación en arcilla polimérica"
               fill
               className="object-cover"
             />
@@ -97,7 +104,7 @@ export default function AboutPage() {
             href="/catalogo"
             className="inline-flex items-center space-x-2 px-8 py-3.5 bg-boho-terracotta text-white rounded-full font-bold text-xs hover:bg-boho-terracotta-600 transition-colors shadow-md"
           >
-            <span>Ver las Creaciones del Taller</span>
+            <span>Ver Nuestras Creaciones</span>
             <ArrowRight className="w-4 h-4 ml-1" />
           </Link>
         </div>

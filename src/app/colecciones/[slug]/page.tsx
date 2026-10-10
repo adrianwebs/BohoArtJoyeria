@@ -86,9 +86,12 @@ export default async function CollectionPage({ params }: PageProps) {
 
       {/* Hero */}
       <section className="relative overflow-hidden" style={{ backgroundColor: accent }}>
-        {collection.heroImage && (
-          <Image src={collection.heroImage} alt="" fill priority sizes="100vw" className="object-cover" />
-        )}
+        {(() => {
+          const cover = collection.heroImage || collection.products?.[0]?.images?.[0];
+          return cover ? (
+            <Image src={cover} alt="" fill priority sizes="100vw" className="object-cover" />
+          ) : null;
+        })()}
         <div
           className="absolute inset-0"
           style={{ background: `linear-gradient(135deg, ${accent}E6 0%, ${accent}99 45%, rgba(0,0,0,0.45) 100%)` }}

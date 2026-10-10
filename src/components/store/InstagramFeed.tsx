@@ -41,7 +41,26 @@ const INSTAGRAM_POSTS = [
   },
 ];
 
-export function InstagramFeed() {
+interface InstagramFeedProps {
+  images?: string[];
+}
+
+const DEFAULT_LIKES = ['248', '194', '312', '175', '280', '420'];
+
+export function InstagramFeed({ images = [] }: InstagramFeedProps) {
+  const displayImages = images.length > 0 ? images.slice(0, 6) : ['/logo.png'];
+  // Ensure we have 6 items if possible
+  while (displayImages.length < 6 && displayImages.length > 0) {
+    displayImages.push(displayImages[displayImages.length % images.length || 0]);
+  }
+
+  const posts = displayImages.slice(0, 6).map((img, idx) => ({
+    id: `ig-prod-${idx}`,
+    image: img,
+    likes: DEFAULT_LIKES[idx % DEFAULT_LIKES.length],
+    alt: `Joyería artesanal Bohoart #${idx + 1}`,
+  }));
+
   return (
     <section className="py-16 bg-boho-sand-50/50 border-t border-boho-sand-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -57,7 +76,7 @@ export function InstagramFeed() {
             <span>@bohoart.jewelry en Instagram</span>
           </a>
           <h2 className="font-serif-boho text-2xl sm:text-3xl font-bold text-boho-charcoal">
-            Síguenos en el Taller
+            Síguenos en Instagram
           </h2>
           <p className="text-xs sm:text-sm text-boho-charcoal-muted mt-1">
             Etiquétanos con tus joyas usando el hashtag <span className="font-semibold text-boho-charcoal">#BohoartJewelry</span> para aparecer aquí.
@@ -66,7 +85,7 @@ export function InstagramFeed() {
 
         {/* Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
-          {INSTAGRAM_POSTS.map((post) => (
+          {posts.map((post) => (
             <a
               key={post.id}
               href="https://instagram.com/bohoart.jewelry"

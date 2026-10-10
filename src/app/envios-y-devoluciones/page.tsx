@@ -25,10 +25,10 @@ export default function ShippingReturnsPage() {
               1. Plazos de Preparación y Envío
             </h2>
             <p>
-              Todas nuestras piezas se elaboran y revisan a mano en nuestro taller. Los pedidos con stock disponible se procesan y empaquetan en 24 horas laborables.
+              Todas nuestras piezas se elaboran y revisan a mano con mimo. Los pedidos con stock disponible se procesan y empaquetan en 24 horas laborables.
             </p>
             <p>
-              Los envíos a España peninsular se entregan mediante mensajería urgente en 24 a 48 horas desde la salida del taller. Recibirás un enlace con el número de seguimiento para monitorear el paquete.
+              Los envíos a España peninsular se entregan mediante mensajería urgente en 24 a 48 horas desde su expedición. Recibirás un enlace con el número de seguimiento para monitorear el paquete.
             </p>
           </section>
 

@@ -39,7 +39,7 @@ export default async function AdminDashboardPage() {
             Resumen General
           </span>
           <h1 className="font-serif-boho text-2xl sm:text-3xl font-bold text-boho-charcoal">
-            Panel de Control del Taller
+            Panel de Control Bohoart
           </h1>
         </div>
 
@@ -218,7 +218,7 @@ export default async function AdminDashboardPage() {
                         {p.name}
                       </h4>
                       <span className="text-[10px] text-amber-800 font-bold">
-                        Quedan {p.stock} uds en taller
+                        Quedan {p.stock} uds en stock
                       </span>
                     </div>
                   </div>

@@ -135,7 +135,7 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Col 4: Taller & Atención */}
+          {/* Col 4: Atención & Información */}
           <div>
             <h5 className="font-serif-boho text-base font-bold text-boho-charcoal mb-4">
               Atención al Cliente
@@ -143,7 +143,7 @@ export function Footer() {
             <ul className="space-y-2.5 text-xs text-boho-charcoal-muted">
               <li>
                 <Link href="/sobre-nosotros" className="hover:text-boho-terracotta transition-colors">
-                  Sobre el Taller Bohoart
+                  Sobre Nosotros
                 </Link>
               </li>
               <li>
