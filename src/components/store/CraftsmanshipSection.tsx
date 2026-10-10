@@ -3,7 +3,16 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Feather, Heart, Sparkles, ShieldCheck, ArrowRight } from 'lucide-react';
 
-export function CraftsmanshipSection() {
+interface CraftsmanshipSectionProps {
+  images?: string[];
+}
+
+export function CraftsmanshipSection({ images = [] }: CraftsmanshipSectionProps) {
+  const img1 = images[0] || '/logo.png';
+  const img2 = images[1] || img1;
+  const img3 = images[2] || img1;
+  const img4 = images[3] || img2;
+
   return (
     <section className="py-16 md:py-24 bg-boho-sand-50/70 border-y border-boho-sand-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -14,8 +23,8 @@ export function CraftsmanshipSection() {
             <div className="space-y-4">
               <div className="group relative aspect-[4/5] rounded-2xl overflow-hidden shadow-card border-2 border-white hover:shadow-elevated transition-all duration-500">
                 <Image
-                  src="https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=800&auto=format&fit=crop&q=80"
-                  alt="Taller de modelado de arcilla polimérica"
+                  src={img1}
+                  alt="Creación artesanal de joyería en arcilla polimérica"
                   fill
                   sizes="(max-width: 768px) 50vw, 300px"
                   className="object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
@@ -23,7 +32,7 @@ export function CraftsmanshipSection() {
               </div>
               <div className="group relative aspect-square rounded-2xl overflow-hidden shadow-soft border-2 border-white bg-boho-sand-200 hover:shadow-card transition-all duration-500">
                 <Image
-                  src="https://images.unsplash.com/photo-1602751584552-8ba73aad10e1?w=600&auto=format&fit=crop&q=80"
+                  src={img2}
                   alt="Detalles de texturas y minerales"
                   fill
                   sizes="(max-width: 768px) 50vw, 300px"
@@ -35,8 +44,8 @@ export function CraftsmanshipSection() {
             <div className="space-y-4 pt-8">
               <div className="group relative aspect-square rounded-2xl overflow-hidden shadow-soft border-2 border-white bg-boho-sand-200 hover:shadow-card transition-all duration-500">
                 <Image
-                  src="https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=600&auto=format&fit=crop&q=80"
-                  alt="Colgante y fornituras doradas"
+                  src={img3}
+                  alt="Detalle artesanal de pieza acabada"
                   fill
                   sizes="(max-width: 768px) 50vw, 300px"
                   className="object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
@@ -44,8 +53,8 @@ export function CraftsmanshipSection() {
               </div>
               <div className="group relative aspect-[4/5] rounded-2xl overflow-hidden shadow-card border-2 border-white hover:shadow-elevated transition-all duration-500">
                 <Image
-                  src="https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=800&auto=format&fit=crop&q=80"
-                  alt="Anillos y piezas artesanales"
+                  src={img4}
+                  alt="Piezas exclusivas hechas a mano"
                   fill
                   sizes="(max-width: 768px) 50vw, 300px"
                   className="object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
@@ -119,7 +128,7 @@ export function CraftsmanshipSection() {
                 href="/sobre-nosotros"
                 className="inline-flex items-center space-x-2 text-sm font-bold text-boho-terracotta hover:text-boho-terracotta-600 active:scale-95 transition-all group"
               >
-                <span>Conoce el paso a paso en nuestro taller</span>
+                <span>Conoce nuestra historia y proceso artesanal</span>
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform duration-300" />
               </Link>
             </div>

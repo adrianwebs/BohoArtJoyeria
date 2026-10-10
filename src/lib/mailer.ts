@@ -70,7 +70,7 @@ export async function sendOrderReceivedEmails(
     const link = paypalMeLink(opts.paypalMeUrl, order.totalAmount);
     intro = `<p>Hemos recibido tu pedido <b>${esc(order.orderNumber)}</b>. Para confirmarlo, paga <b>${formatPrice(order.totalAmount)}</b> por PayPal aquí: <a href="${esc(link)}">${esc(link)}</a><br>Escribe <b>${esc(order.orderNumber)}</b> como nota del pago. Prepararemos tu pedido en cuanto veamos el pago.</p>`;
   } else {
-    intro = `<p>¡Gracias, ${esc(order.customerName)}! Hemos recibido tu pago y ya estamos preparando tu pedido <b>${esc(order.orderNumber)}</b> en el taller.</p>`;
+    intro = `<p>¡Gracias, ${esc(order.customerName)}! Hemos recibido tu pago y ya estamos preparando tu pedido <b>${esc(order.orderNumber)}</b> con mucho mimo.</p>`;
   }
   const addr = `<p style="font-size:13px;color:#8a7f79">Envío a: ${esc(order.shippingAddress)}, ${esc(order.postalCode)} ${esc(order.city)} (${esc(order.province)})</p>`;
 
@@ -102,7 +102,7 @@ export async function sendOrderShippedEmail(order: Order) {
     `Tu pedido ${order.orderNumber} está en camino`,
     layout(
       'Tu pedido está en camino',
-      `<p>Tu pedido <b>${esc(order.orderNumber)}</b> ha salido del taller.</p>${order.trackingNumber ? `<p>Número de seguimiento: <b>${esc(order.trackingNumber)}</b></p>` : ''}`
+      `<p>Tu pedido <b>${esc(order.orderNumber)}</b> ha sido enviado.</p>${order.trackingNumber ? `<p>Número de seguimiento: <b>${esc(order.trackingNumber)}</b></p>` : ''}`
     )
   );
 }

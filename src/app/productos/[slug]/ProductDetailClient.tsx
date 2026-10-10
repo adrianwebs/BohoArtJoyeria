@@ -161,7 +161,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             <span className="w-2.5 h-2.5 rounded-full bg-boho-sage animate-pulse" />
             <span>
               {product.stock > 0
-                ? `En stock para envío inmediato (${product.stock} disponibles en taller)`
+                ? `En stock para envío inmediato (${product.stock} disponibles)`
                 : 'Agotado temporalmente'}
             </span>
           </div>

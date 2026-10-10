@@ -33,7 +33,7 @@ export default async function CatalogPage({
             Catálogo Bohoart
           </h1>
           <p className="text-sm text-boho-charcoal-muted mt-2">
-            Modelados uno a uno en nuestro taller. Filtrados por estilo, precio y categoría.
+            Modelados a mano pieza a pieza. Filtrados por estilo, precio y categoría.
           </p>
         </div>
 

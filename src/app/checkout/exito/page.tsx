@@ -48,7 +48,7 @@ export default async function OrderSuccessPage({ searchParams }: SuccessPageProp
           <p className="text-xs sm:text-sm text-boho-charcoal-muted mt-2">
             {isPending
               ? 'Solo falta que realices el pago para empezar a preparar tus piezas.'
-              : 'Hemos recibido tu orden y ya nos encontramos preparando tus piezas artesanales en el taller.'}
+              : 'Hemos recibido tu orden y ya nos encontramos preparando tus piezas artesanales con mucho mimo.'}
           </p>
         </div>
 
@@ -111,7 +111,7 @@ export default async function OrderSuccessPage({ searchParams }: SuccessPageProp
         </div>
 
         <div className="text-xs text-boho-charcoal-muted leading-relaxed">
-          Te enviaremos un email con el número de seguimiento de la agencia de transporte tan pronto como el paquete salga de nuestro taller.
+          Te enviaremos un email con el número de seguimiento de la agencia de transporte tan pronto como el paquete sea enviado.
         </div>
 
         <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">

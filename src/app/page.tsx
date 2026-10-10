@@ -10,6 +10,7 @@ import { ReviewSection } from '@/components/store/ReviewSection';
 import { InstagramFeed } from '@/components/store/InstagramFeed';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { storeService } from '@/lib/storeService';
+import { getProductImagePool, selectProductImages } from '@/lib/productImages';
 
 export default async function HomePage() {
   const categories = await storeService.getCategories();
@@ -18,17 +19,30 @@ export default async function HomePage() {
   const reviews = await storeService.getReviews({ approvedOnly: true });
   const spotlight = await storeService.getHomeCollection();
 
+  const imagePool = getProductImagePool(allProducts);
+  const heroShowcaseImage = imagePool[0];
+  const craftImages = selectProductImages(imagePool, 4, true);
+  const igImages = selectProductImages(imagePool, 6, true);
+
+  const categoryImageMap: Record<string, string> = {};
+  for (const p of allProducts) {
+    if (p.categoryId && p.images && p.images.length > 0 && !categoryImageMap[p.categoryId]) {
+      const nonStock = p.images.find((img) => !img.includes('unsplash.com'));
+      categoryImageMap[p.categoryId] = nonStock || p.images[0];
+    }
+  }
+
   return (
     <div>
       {/* Hero */}
-      <HeroBanner />
+      <HeroBanner showcaseImage={heroShowcaseImage} />
 
       {/* Seasonal collection currently live (Feria, Halloween, Navidad...) */}
       {spotlight && <CollectionSpotlight collection={spotlight} />}
 
       {/* Featured Categories */}
       <ScrollReveal delay={100}>
-        <FeaturedCategories categories={categories} />
+        <FeaturedCategories categories={categories} categoryImages={categoryImageMap} />
       </ScrollReveal>
 
       {/* Best Sellers / Featured Section */}
@@ -64,7 +78,7 @@ export default async function HomePage() {
 
       {/* Craftsmanship value prop */}
       <ScrollReveal delay={100}>
-        <CraftsmanshipSection />
+        <CraftsmanshipSection images={craftImages} />
       </ScrollReveal>
 
       {/* Customer Reviews */}
@@ -74,7 +88,7 @@ export default async function HomePage() {
 
       {/* Instagram UGC Feed */}
       <ScrollReveal delay={100}>
-        <InstagramFeed />
+        <InstagramFeed images={igImages} />
       </ScrollReveal>
     </div>
   );

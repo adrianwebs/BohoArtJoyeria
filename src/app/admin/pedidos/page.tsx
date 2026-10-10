@@ -251,8 +251,8 @@ export default function AdminOrdersPage() {
 
       {/* Order Detail Drawer Modal */}
       {selectedOrder && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-boho-sand-200 max-h-[90vh] overflow-y-auto space-y-6">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm flex items-start justify-center p-4 py-8 sm:py-12">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-boho-sand-200 space-y-6">
             
             <div className="flex justify-between items-start pb-4 border-b border-boho-sand-200">
               <div>

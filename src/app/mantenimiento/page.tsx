@@ -5,7 +5,7 @@ import { storeService } from '@/lib/storeService';
 
 export const metadata = {
   title: 'En Mantenimiento | Bohoart Jewelry',
-  description: 'Estamos renovando nuestro taller y preparando nuevas colecciones de joyería artesanal en arcilla polimérica.',
+  description: 'Estamos renovando nuestra tienda y preparando nuevas colecciones de joyería artesanal en arcilla polimérica.',
 };
 
 export default async function MaintenancePage() {
@@ -48,11 +48,11 @@ export default async function MaintenancePage() {
           
           <div className="inline-flex items-center space-x-2 px-4 py-1.5 rounded-full bg-boho-sand-200 text-boho-terracotta text-xs font-bold uppercase tracking-wider">
             <Sparkles className="w-3.5 h-3.5 text-boho-gold animate-spin" />
-            <span>Taller en Preparación</span>
+            <span>Tienda en Preparación</span>
           </div>
 
           <h1 className="font-serif-boho text-3xl sm:text-5xl font-bold text-boho-charcoal tracking-tight leading-tight">
-            {settings.maintenanceTitle || '✨ Estamos horneando novedades en el taller ✨'}
+            {settings.maintenanceTitle || '✨ Estamos horneando nuevas creaciones ✨'}
           </h1>
 
           <p className="text-sm sm:text-base text-boho-charcoal-muted leading-relaxed max-w-lg mx-auto">

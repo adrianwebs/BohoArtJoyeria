@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Plus, Edit2, Trash2, X, ExternalLink, ArrowUp, ArrowDown, Search, CalendarDays, Repeat } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, ExternalLink, ArrowUp, ArrowDown, Search, CalendarDays, Repeat, Star } from 'lucide-react';
 import { Collection, CollectionStatus } from '@/lib/types';
 import { slugify } from '@/lib/utils';
 import { utcToMadridDate } from '@/lib/collectionSchedule';
@@ -57,6 +57,8 @@ export function CollectionsAdminClient({
   const [showOnHome, setShowOnHome] = useState(true);
   const [sortOrder, setSortOrder] = useState('0');
   const [productIds, setProductIds] = useState<string[]>([]);
+  const [showCatalogCoverPicker, setShowCatalogCoverPicker] = useState(false);
+  const [catalogCoverSearch, setCatalogCoverSearch] = useState('');
 
   const productById = new Map(products.map((p) => [p.id, p]));
 
@@ -81,6 +83,8 @@ export function CollectionsAdminClient({
     setSortOrder(String(c?.sortOrder ?? 0));
     setProductIds(c?.productIds ?? []);
     setProductSearch('');
+    setShowCatalogCoverPicker(false);
+    setCatalogCoverSearch('');
     setFormError('');
     setIsModalOpen(true);
   };
@@ -179,10 +183,13 @@ export function CollectionsAdminClient({
                   className="relative aspect-[16/8] w-full"
                   style={{ backgroundColor: c.accentColor }}
                 >
-                  {c.heroImage && (
+                {(() => {
+                  const cover = c.heroImage || (c.productIds?.[0] ? productById.get(c.productIds[0])?.image : null);
+                  return cover ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={c.heroImage} alt="" className="absolute inset-0 w-full h-full object-cover" />
-                  )}
+                    <img src={cover} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                  ) : null;
+                })()}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/65 to-transparent" />
                   <span className={`absolute top-3 right-3 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${st.cls}`}>
                     {st.label}
@@ -247,8 +254,8 @@ export function CollectionsAdminClient({
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm flex items-start sm:items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-3xl w-full p-6 sm:p-8 shadow-2xl border border-boho-sand-200 my-4">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm flex items-start justify-center p-4 py-8 sm:py-12">
+          <div className="bg-white rounded-3xl max-w-3xl w-full p-6 sm:p-8 shadow-2xl border border-boho-sand-200">
             <div className="flex justify-between items-center pb-4 border-b border-boho-sand-200">
               <h3 className="font-serif-boho text-xl font-bold text-boho-charcoal">
                 {editing ? 'Editar Colección' : 'Nueva Colección'}
@@ -280,7 +287,122 @@ export function CollectionsAdminClient({
                 <textarea rows={4} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Cuenta la historia de la colección…" className={inputCls} />
               </div>
 
-              <ImageUploader label="Imagen principal (hero)" value={heroImage ? [heroImage] : []} onChange={(u) => setHeroImage(u[0] || '')} />
+              {/* Selector de Foto de Portada */}
+              <div className="space-y-3 p-4 bg-boho-sand-50/70 border border-boho-sand-200 rounded-2xl">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-boho-charcoal flex items-center gap-1.5">
+                    <Star className="w-4 h-4 text-boho-gold fill-boho-gold" />
+                    <span>Foto de Portada de la Colección (Hero Banner)</span>
+                  </label>
+                  {heroImage && (
+                    <button
+                      type="button"
+                      onClick={() => setHeroImage('')}
+                      className="text-[11px] text-red-600 hover:underline font-semibold"
+                    >
+                      Quitar foto de portada
+                    </button>
+                  )}
+                </div>
+
+                <ImageUploader
+                  label="Subir foto desde tu dispositivo o mantener la actual"
+                  value={heroImage ? [heroImage] : []}
+                  onChange={(u) => setHeroImage(u[0] || '')}
+                />
+
+                {/* Selección rápida entre los productos añadidos a esta colección */}
+                {productIds.some((id) => Boolean(productById.get(id)?.image)) && (
+                  <div className="pt-2 border-t border-boho-sand-200/80">
+                    <span className="block text-[11px] font-semibold text-boho-charcoal mb-1.5">
+                      O haz clic en una foto de los productos de esta colección para fijarla como portada:
+                    </span>
+                    <div className="flex items-center gap-2.5 overflow-x-auto pb-2 pt-1">
+                      {productIds
+                        .map((id) => productById.get(id))
+                        .filter((p): p is PickerProduct => Boolean(p && p.image))
+                        .map((p) => {
+                          const isSelected = heroImage === p.image;
+                          return (
+                            <button
+                              key={p.id}
+                              type="button"
+                              onClick={() => setHeroImage(p.image || '')}
+                              className={`group relative shrink-0 rounded-xl overflow-hidden border-2 transition-all p-1 text-left ${
+                                isSelected
+                                  ? 'border-boho-terracotta bg-white shadow ring-2 ring-boho-terracotta/30'
+                                  : 'border-transparent hover:border-boho-sand-300 bg-white/70 hover:bg-white'
+                              }`}
+                            >
+                              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden relative">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={p.image!} alt={p.name} className="w-full h-full object-cover" />
+                                {isSelected && (
+                                  <div className="absolute inset-0 bg-boho-terracotta/25 flex items-center justify-center">
+                                    <span className="bg-boho-terracotta text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow">
+                                      Portada
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                              <p className="text-[10px] text-boho-charcoal truncate w-16 sm:w-20 mt-1 font-medium">
+                                {p.name}
+                              </p>
+                            </button>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Opción de elegir foto de cualquier producto del catálogo */}
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowCatalogCoverPicker(!showCatalogCoverPicker)}
+                    className="text-xs font-semibold text-boho-terracotta hover:underline flex items-center gap-1"
+                  >
+                    <span>{showCatalogCoverPicker ? '▲ Ocultar fotos del catálogo' : '▼ O elegir foto de cualquier joya del catálogo'}</span>
+                  </button>
+                  {showCatalogCoverPicker && (
+                    <div className="mt-2.5 p-3 bg-white rounded-xl border border-boho-sand-200 space-y-2">
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={catalogCoverSearch}
+                          onChange={(e) => setCatalogCoverSearch(e.target.value)}
+                          placeholder="Buscar joya por nombre..."
+                          className={inputCls + ' pl-8 py-1.5'}
+                        />
+                        <Search className="w-3.5 h-3.5 text-boho-charcoal-muted absolute left-2.5 top-2" />
+                      </div>
+                      <div className="max-h-40 overflow-y-auto grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                        {products
+                          .filter((p) => p.image && (!catalogCoverSearch.trim() || p.name.toLowerCase().includes(catalogCoverSearch.toLowerCase())))
+                          .map((p) => {
+                            const isSelected = heroImage === p.image;
+                            return (
+                              <button
+                                key={`cat-cover-${p.id}`}
+                                type="button"
+                                onClick={() => setHeroImage(p.image || '')}
+                                className={`flex items-center gap-2 p-1.5 rounded-lg border text-left transition-all ${
+                                  isSelected
+                                    ? 'border-boho-terracotta bg-boho-terracotta/10 ring-1 ring-boho-terracotta'
+                                    : 'border-boho-sand-200 hover:border-boho-terracotta bg-white'
+                                }`}
+                              >
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={p.image!} alt="" className="w-8 h-8 rounded-md object-cover shrink-0" />
+                                <span className="text-[10px] text-boho-charcoal truncate flex-1 font-medium">{p.name}</span>
+                              </button>
+                            );
+                          })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
@@ -333,12 +455,35 @@ export function CollectionsAdminClient({
                     {productIds.map((id, i) => {
                       const p = productById.get(id);
                       return (
-                        <li key={id} className="flex items-center justify-between text-xs bg-white rounded-lg px-2.5 py-1.5 border border-boho-sand-100">
-                          <span className="truncate">
-                            <span className="text-boho-charcoal-muted mr-2">{i + 1}.</span>
-                            {p?.name ?? 'Producto eliminado'}
-                          </span>
-                          <span className="flex items-center space-x-1 shrink-0">
+                        <li key={id} className="flex items-center justify-between text-xs bg-white rounded-lg px-2.5 py-1.5 border border-boho-sand-100 gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            {p?.image && (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={p.image} alt="" className="w-7 h-7 rounded-md object-cover shrink-0" />
+                            )}
+                            <span className="truncate">
+                              <span className="text-boho-charcoal-muted mr-1.5">{i + 1}.</span>
+                              {p?.name ?? 'Producto eliminado'}
+                            </span>
+                          </div>
+                          <span className="flex items-center space-x-1.5 shrink-0">
+                            {p?.image && (
+                              p.image === heroImage ? (
+                                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full flex items-center gap-0.5">
+                                  <Star className="w-3 h-3 fill-emerald-700" />
+                                  <span>Portada</span>
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => setHeroImage(p.image || '')}
+                                  className="text-[10px] font-semibold text-boho-terracotta hover:bg-boho-sand-100 px-2 py-0.5 rounded-full border border-boho-terracotta/30 transition-colors"
+                                  title="Fijar como foto de portada"
+                                >
+                                  Usar de portada
+                                </button>
+                              )
+                            )}
                             <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="p-1 disabled:opacity-30" aria-label="Subir">
                               <ArrowUp className="w-3.5 h-3.5" />
                             </button>

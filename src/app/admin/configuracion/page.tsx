@@ -19,7 +19,7 @@ export default function AdminSettingsPage() {
   // Maintenance states
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [maintenanceAllowedIps, setMaintenanceAllowedIps] = useState('127.0.0.1, ::1');
-  const [maintenanceTitle, setMaintenanceTitle] = useState('✨ Estamos horneando novedades en el taller ✨');
+  const [maintenanceTitle, setMaintenanceTitle] = useState('✨ Estamos preparando nuevas creaciones ✨');
   const [maintenanceMessage, setMaintenanceMessage] = useState('Nuestra tienda online se encuentra en mantenimiento durante unas horas para añadir nuevas colecciones artesanales en arcilla polimérica. ¡Volvemos muy pronto!');
 
   const [saved, setSaved] = useState(false);
@@ -212,7 +212,7 @@ export default function AdminSettingsPage() {
                 type="text"
                 value={maintenanceTitle}
                 onChange={(e) => setMaintenanceTitle(e.target.value)}
-                placeholder="Ej. ✨ Estamos preparando nuevas joyas en el taller ✨"
+                placeholder="Ej. ✨ Estamos preparando nuevas creaciones ✨"
                 className="w-full px-3.5 py-2 text-xs bg-white border border-boho-sand-300 rounded-xl focus:outline-none focus:border-boho-terracotta"
               />
             </div>

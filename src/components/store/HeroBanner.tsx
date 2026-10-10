@@ -13,7 +13,11 @@ const HIGHLIGHT_WORDS = [
   'texturas de tierra',
 ];
 
-export function HeroBanner() {
+interface HeroBannerProps {
+  showcaseImage?: string;
+}
+
+export function HeroBanner({ showcaseImage }: HeroBannerProps = {}) {
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [fadeState, setFadeState] = useState<'in' | 'out'>('in');
 
@@ -122,8 +126,8 @@ export function HeroBanner() {
             {/* Main Visual Image Card */}
             <div className="group relative w-full max-w-md aspect-square sm:aspect-[4/5] rounded-3xl overflow-hidden shadow-elevated border-4 border-white transition-all duration-500 hover:scale-[1.01]">
               <Image
-                src="https://images.unsplash.com/photo-1630019852942-f89202989a59?w=1000&auto=format&fit=crop&q=85"
-                alt="Pendientes artesanales Bohoart en arcilla polimérica"
+                src={showcaseImage || '/logo.png'}
+                alt="Joyas artesanales Bohoart en arcilla polimérica"
                 fill
                 priority
                 loading="eager"
@@ -160,11 +164,11 @@ export function HeroBanner() {
                   <div className="flex items-center space-x-1.5">
                     <span className="w-2 h-2 rounded-full bg-boho-sage animate-pulse" />
                     <span className="text-[10px] uppercase tracking-wider text-boho-sage font-bold">
-                      En el taller ahora
+                      Disponible Ahora
                     </span>
                   </div>
                   <span className="font-serif-boho text-sm font-bold text-boho-charcoal block truncate">
-                    Colección Tierra & Solsticio
+                    Joyería Artesanal Exclusiva
                   </span>
                 </div>
                 <Link

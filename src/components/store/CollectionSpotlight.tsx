@@ -7,6 +7,8 @@ import { Countdown } from './Countdown';
 
 /** Home-page banner for the collection that is currently live (seasonal campaign). */
 export function CollectionSpotlight({ collection }: { collection: Collection }) {
+  const coverImage = collection.heroImage || collection.products?.[0]?.images?.[0];
+
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10">
       <Link
@@ -14,9 +16,9 @@ export function CollectionSpotlight({ collection }: { collection: Collection }) 
         className="group relative block overflow-hidden rounded-3xl shadow-card"
         style={{ backgroundColor: collection.accentColor }}
       >
-        {collection.heroImage && (
+        {coverImage && (
           <Image
-            src={collection.heroImage}
+            src={coverImage}
             alt=""
             fill
             sizes="(max-width: 1280px) 100vw, 1280px"

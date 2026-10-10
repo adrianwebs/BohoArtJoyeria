@@ -19,7 +19,7 @@ const FAQS = [
   },
   {
     q: '¿Cuánto tardan los envíos?',
-    a: 'Los pedidos en stock se preparan en 24 horas laborables en nuestro taller y se envían por mensajería urgente 24/48h con número de seguimiento para Península y Baleares.',
+    a: 'Los pedidos en stock se preparan en 24 horas laborables y se envían por mensajería urgente 24/48h con número de seguimiento para Península y Baleares.',
   },
   {
     q: '¿Cómo son los gastos de envío?',
@@ -84,7 +84,7 @@ export default function FAQPage() {
               className="inline-flex items-center space-x-2 px-6 py-2.5 bg-boho-terracotta text-white rounded-full text-xs font-semibold hover:bg-boho-terracotta-600 transition-colors shadow-sm"
             >
               <Mail className="w-3.5 h-3.5" />
-              <span>Contactar con el Taller</span>
+              <span>Contactar con Nosotros</span>
             </Link>
           </div>
         </div>
