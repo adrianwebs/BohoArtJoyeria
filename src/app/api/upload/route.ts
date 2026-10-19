@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
 import { promises as fs } from 'fs';
 import path from 'path';
+import convertHeic from 'heic-convert';
 import { requireAdmin } from '@/lib/auth';
 import {
   detectImageExt,
@@ -48,12 +49,38 @@ export async function POST(req: Request) {
       errors.push(`${file.name}: supera los ${MAX_UPLOAD_BYTES / 1024 / 1024} MB`);
       continue;
     }
-    const buf = Buffer.from(await file.arrayBuffer());
-    const ext = detectImageExt(buf);
+    let buf = Buffer.from(await file.arrayBuffer());
+    let ext: 'jpg' | 'png' | 'webp' | 'gif' | 'heic' | null = detectImageExt(buf);
+
+    // Fallback: If magic byte check missed a non-standard brand but extension/MIME says heic/heif:
+    if (!ext && (/\.(heic|heif)$/i.test(file.name) || file.type.includes('heic') || file.type.includes('heif'))) {
+      if (buf.length >= 12 && buf.subarray(4, 8).toString('ascii') === 'ftyp') {
+        ext = 'heic';
+      }
+    }
+
     if (!ext) {
-      errors.push(`${file.name}: formato no admitido (usa JPG, PNG, WebP o GIF)`);
+      errors.push(`${file.name}: formato no admitido (usa JPG, PNG, WebP, GIF o HEIC)`);
       continue;
     }
+
+    // Convert HEIC/HEIF to JPEG so all browsers and devices can display the images natively
+    if (ext === 'heic') {
+      try {
+        const converted = await convertHeic({
+          buffer: buf,
+          format: 'JPEG',
+          quality: 0.9,
+        });
+        buf = Buffer.from(converted);
+        ext = 'jpg';
+      } catch (convErr) {
+        console.error('HEIC conversion failed:', convErr);
+        errors.push(`${file.name}: no se pudo procesar la imagen HEIC`);
+        continue;
+      }
+    }
+
     const name = `${randomUUID()}.${ext}`;
     try {
       await fs.writeFile(path.join(/*turbopackIgnore: true*/ dir, name), buf);
