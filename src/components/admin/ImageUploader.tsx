@@ -113,7 +113,7 @@ export function ImageUploader({ value, onChange, multiple = false, label }: Imag
         <input
           ref={inputRef}
           type="file"
-          accept="image/jpeg,image/png,image/webp,image/gif"
+          accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,.heic,.heif,.HEIC,.HEIF"
           multiple={multiple}
           className="hidden"
           onChange={(e) => upload(e.target.files)}
@@ -142,7 +142,7 @@ export function ImageUploader({ value, onChange, multiple = false, label }: Imag
         </div>
       </div>
 
-      <p className="text-[10px] text-boho-charcoal-muted">JPG, PNG, WebP o GIF · máx. 5 MB por imagen</p>
+      <p className="text-[10px] text-boho-charcoal-muted">JPG, PNG, WebP, GIF o HEIC · máx. 15 MB por imagen</p>
       {error && (
         <p role="alert" className="text-[11px] font-semibold text-red-600">
           {error}
