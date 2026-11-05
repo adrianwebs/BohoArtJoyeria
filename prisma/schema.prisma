@@ -27,6 +27,7 @@ model Category {
   description String?   @db.NVarChar(Max)
   image       String?   @db.NVarChar(Max)
   sortOrder   Int       @default(0)
+  isActive    Boolean   @default(true)
   createdAt   DateTime  @default(now())
   products    Product[]
 }
@@ -69,6 +70,8 @@ model Order {
   province        String
   country         String      @default("ES")
   subtotal        Decimal     @db.Decimal(10, 2)
+  discountAmount  Decimal?    @default(0.00) @db.Decimal(10, 2)
+  couponCode      String?
   shippingCost    Decimal     @db.Decimal(10, 2)
   totalAmount     Decimal     @db.Decimal(10, 2)
   status          String      @default("PENDING") // "PENDING" | "PAID" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED"
@@ -157,4 +160,19 @@ model CollectionProduct {
   sortOrder    Int        @default(0)
 
   @@id([collectionId, productId])
+}
+
+model Coupon {
+  id             String    @id @default(uuid())
+  code           String    @unique
+  description    String?   @db.NVarChar(Max)
+  discountType   String    @default("PERCENTAGE") // "PERCENTAGE" | "FIXED"
+  discountValue  Decimal   @db.Decimal(10, 2)
+  minOrderAmount Decimal?  @default(0.00) @db.Decimal(10, 2)
+  maxUses        Int?
+  usedCount      Int       @default(0)
+  expiresAt      DateTime?
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 }

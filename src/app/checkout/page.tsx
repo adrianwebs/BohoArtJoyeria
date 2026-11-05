@@ -4,13 +4,13 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ShieldCheck, Truck, ArrowLeft, Lock, Sparkles, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, Truck, ArrowLeft, Lock, Sparkles, CheckCircle2, Tag, X, AlertCircle } from 'lucide-react';
 import { useCart } from '@/lib/cartContext';
 import { formatPrice } from '@/lib/utils';
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { cart, subtotal, clearCart } = useCart();
+  const { cart, subtotal, clearCart, appliedCoupon, discountAmount, applyCoupon, removeCoupon } = useCart();
 
   const [customerName, setCustomerName] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
@@ -31,6 +31,11 @@ export default function CheckoutPage() {
   } | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
+  // Promo code state
+  const [couponInput, setCouponInput] = useState('');
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponFeedback, setCouponFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
   useEffect(() => {
     fetch('/api/payments/config')
       .then((r) => r.json())
@@ -42,9 +47,10 @@ export default function CheckoutPage() {
   }, []);
 
   const freeShippingThreshold = payConfig?.freeShippingThreshold ?? 40.0;
-  const isFreeShipping = subtotal >= freeShippingThreshold;
+  const discountedSubtotal = Math.max(0, subtotal - discountAmount);
+  const isFreeShipping = discountedSubtotal >= freeShippingThreshold;
   const shippingCost = isFreeShipping ? 0 : payConfig?.standardShippingCost ?? 3.95;
-  const totalAmount = subtotal + shippingCost;
+  const totalAmount = Math.max(0, discountedSubtotal + shippingCost);
 
   // Latest form data submitted with the order.
   const payloadRef = useRef<Record<string, unknown>>({});
@@ -58,6 +64,7 @@ export default function CheckoutPage() {
     province: province || city,
     country: 'España',
     notes,
+    couponCode: appliedCoupon?.code || null,
     items: cart.map((item) => ({ productId: item.product.id, quantity: item.quantity })),
   };
 
@@ -81,6 +88,25 @@ export default function CheckoutPage() {
       </div>
     );
   }
+
+  const handleApplyCoupon = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!couponInput.trim()) return;
+
+    setCouponLoading(true);
+    setCouponFeedback(null);
+    try {
+      const res = await applyCoupon(couponInput);
+      if (res.success) {
+        setCouponFeedback({ type: 'success', message: res.message });
+        setCouponInput('');
+      } else {
+        setCouponFeedback({ type: 'error', message: res.message });
+      }
+    } finally {
+      setCouponLoading(false);
+    }
+  };
 
   const finishOrder = (orderNumber: string, method: 'PAYPAL_ME' | 'BIZUM') => {
     clearCart();
@@ -162,51 +188,53 @@ export default function CheckoutPage() {
                     required
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder="Ej. Carmen Navarro"
+                    placeholder="María Carmen Pérez"
                     className="w-full px-3.5 py-2.5 text-xs bg-boho-sand-50 border border-boho-sand-300 rounded-xl focus:outline-none focus:border-boho-terracotta"
                   />
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-boho-charcoal mb-1">
-                    Email de Confirmación *
+                    Correo Electrónico (para confirmación) *
                   </label>
                   <input
                     type="email"
                     required
                     value={customerEmail}
                     onChange={(e) => setCustomerEmail(e.target.value)}
-                    placeholder="carmen@ejemplo.com"
+                    placeholder="maria@ejemplo.com"
                     className="w-full px-3.5 py-2.5 text-xs bg-boho-sand-50 border border-boho-sand-300 rounded-xl focus:outline-none focus:border-boho-terracotta"
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-boho-charcoal mb-1">
-                  Teléfono de Contacto (para el transportista)
-                </label>
-                <input
-                  type="tel"
-                  value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value)}
-                  placeholder="+34 600 000 000"
-                  className="w-full px-3.5 py-2.5 text-xs bg-boho-sand-50 border border-boho-sand-300 rounded-xl focus:outline-none focus:border-boho-terracotta"
-                />
-              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-boho-charcoal mb-1">
+                    Teléfono (para la agencia de transporte)
+                  </label>
+                  <input
+                    type="tel"
+                    value={customerPhone}
+                    onChange={(e) => setCustomerPhone(e.target.value)}
+                    placeholder="+34 600 000 000"
+                    className="w-full px-3.5 py-2.5 text-xs bg-boho-sand-50 border border-boho-sand-300 rounded-xl focus:outline-none focus:border-boho-terracotta"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-boho-charcoal mb-1">
-                  Dirección de Envío *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={shippingAddress}
-                  onChange={(e) => setShippingAddress(e.target.value)}
-                  placeholder="Calle, número, piso, puerta..."
-                  className="w-full px-3.5 py-2.5 text-xs bg-boho-sand-50 border border-boho-sand-300 rounded-xl focus:outline-none focus:border-boho-terracotta"
-                />
+                <div>
+                  <label className="block text-xs font-semibold text-boho-charcoal mb-1">
+                    Dirección Completa *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={shippingAddress}
+                    onChange={(e) => setShippingAddress(e.target.value)}
+                    placeholder="Calle Mayor 12, 3º B"
+                    className="w-full px-3.5 py-2.5 text-xs bg-boho-sand-50 border border-boho-sand-300 rounded-xl focus:outline-none focus:border-boho-terracotta"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -219,7 +247,7 @@ export default function CheckoutPage() {
                     required
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
-                    placeholder="Madrid"
+                    placeholder="Albacete"
                     className="w-full px-3.5 py-2.5 text-xs bg-boho-sand-50 border border-boho-sand-300 rounded-xl focus:outline-none focus:border-boho-terracotta"
                   />
                 </div>
@@ -233,21 +261,20 @@ export default function CheckoutPage() {
                     required
                     value={postalCode}
                     onChange={(e) => setPostalCode(e.target.value)}
-                    placeholder="28001"
+                    placeholder="02001"
                     className="w-full px-3.5 py-2.5 text-xs bg-boho-sand-50 border border-boho-sand-300 rounded-xl focus:outline-none focus:border-boho-terracotta"
                   />
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-boho-charcoal mb-1">
-                    Provincia *
+                    Provincia
                   </label>
                   <input
                     type="text"
-                    required
                     value={province}
                     onChange={(e) => setProvince(e.target.value)}
-                    placeholder="Madrid"
+                    placeholder="Albacete"
                     className="w-full px-3.5 py-2.5 text-xs bg-boho-sand-50 border border-boho-sand-300 rounded-xl focus:outline-none focus:border-boho-terracotta"
                   />
                 </div>
@@ -255,36 +282,36 @@ export default function CheckoutPage() {
 
               <div>
                 <label className="block text-xs font-semibold text-boho-charcoal mb-1">
-                  Notas para la entrega o dedicatoria de regalo (opcional)
+                  Notas de entrega (opcional)
                 </label>
-                <textarea
-                  rows={2}
+                <input
+                  type="text"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Ej: Si es para regalo, escribe aquí el mensaje para la tarjeta..."
-                  className="w-full px-3.5 py-2 text-xs bg-boho-sand-50 border border-boho-sand-300 rounded-xl focus:outline-none focus:border-boho-terracotta resize-none"
+                  placeholder="Dejar en portería si no estoy, tocar el timbre 2 veces..."
+                  className="w-full px-3.5 py-2.5 text-xs bg-boho-sand-50 border border-boho-sand-300 rounded-xl focus:outline-none focus:border-boho-terracotta"
                 />
               </div>
             </div>
 
-            {/* Step 2: Método de Pago (PayPal / Bizum, confirmación manual) */}
+            {/* Step 2: Método de Pago */}
             <div className="bg-white p-6 sm:p-8 rounded-3xl border border-boho-sand-200 shadow-soft space-y-5">
               <div className="flex items-center justify-between pb-3 border-b border-boho-sand-200">
                 <h2 className="font-serif-boho text-xl font-bold text-boho-charcoal flex items-center space-x-2">
                   <span className="w-6 h-6 rounded-full bg-boho-terracotta text-white text-xs flex items-center justify-center font-sans">
                     2
                   </span>
-                  <span>Método de Pago Seguro</span>
+                  <span>Método de Pago</span>
                 </h2>
-                <div className="flex items-center space-x-1 text-xs text-boho-sage font-medium">
+                <div className="flex items-center space-x-1 text-boho-sage text-[11px] font-semibold">
                   <Lock className="w-3.5 h-3.5" />
-                  <span>256-bit SSL</span>
+                  <span>Pago Seguro</span>
                 </div>
               </div>
 
-              {payConfig && !payConfig.paypalMeUrl && !payConfig.bizumPhone && (
-                <div className="p-3.5 bg-amber-50 text-amber-800 text-xs rounded-xl border border-amber-200">
-                  El pago online no está disponible ahora mismo. Escríbenos y te ayudamos con tu pedido.
+              {!payConfig?.bizumPhone && !payConfig?.paypalMeUrl && (
+                <div className="p-4 bg-amber-50 text-amber-800 text-xs rounded-2xl border border-amber-200">
+                  Los métodos de pago están en mantenimiento. Por favor, inténtalo más tarde o escríbenos a nuestro contacto.
                 </div>
               )}
 
@@ -307,14 +334,14 @@ export default function CheckoutPage() {
                         className="text-boho-terracotta focus:ring-boho-terracotta"
                       />
                       <div>
-                        <span className="font-bold text-xs text-boho-charcoal block">PayPal</span>
+                        <span className="font-bold text-xs text-boho-charcoal block">PayPal / Tarjeta</span>
                         <span className="text-[11px] text-boho-charcoal-muted">
-                          Haz el pedido y te damos el enlace para pagar por PayPal. Lo preparamos en cuanto recibimos el pago.
+                          Pago directo y seguro mediante PayPal.Me (con saldo PayPal o tarjeta)
                         </span>
                       </div>
                     </div>
-                    <span className="text-xs font-extrabold text-[#003087] bg-white px-2.5 py-1 rounded-lg border border-boho-sand-300 shadow-xs">
-                      PayPal
+                    <span className="text-xs font-extrabold text-[#003087]">
+                      Pay<span className="text-[#0079C1]">Pal</span>
                     </span>
                   </label>
                 )}
@@ -405,12 +432,90 @@ export default function CheckoutPage() {
               ))}
             </div>
 
+            {/* Promo Code Box */}
+            <div className="pt-4 border-t border-boho-sand-200">
+              {appliedCoupon ? (
+                <div className="flex items-center justify-between p-3.5 bg-emerald-50/90 border border-emerald-200 rounded-2xl">
+                  <div className="flex items-center space-x-2.5">
+                    <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                      <Tag className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-emerald-900 block">
+                        Cupón {appliedCoupon.code} aplicado
+                      </span>
+                      <span className="text-[11px] text-emerald-700">
+                        {appliedCoupon.discountType === 'PERCENTAGE'
+                          ? `${appliedCoupon.discountValue}% de descuento`
+                          : `${formatPrice(appliedCoupon.discountValue)} de descuento directo`}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      removeCoupon();
+                      setCouponFeedback(null);
+                    }}
+                    className="p-1.5 hover:bg-emerald-200/60 rounded-xl text-emerald-800 transition-colors"
+                    title="Eliminar cupón"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleApplyCoupon} className="space-y-2">
+                  <label className="block text-xs font-semibold text-boho-charcoal">
+                    ¿Tienes un código de descuento?
+                  </label>
+                  <div className="flex space-x-2">
+                    <input
+                      type="text"
+                      value={couponInput}
+                      onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                      placeholder="Ej. BOHO10"
+                      className="flex-1 px-3.5 py-2 text-xs uppercase font-mono tracking-wider bg-boho-sand-50 border border-boho-sand-300 rounded-xl focus:outline-none focus:border-boho-terracotta"
+                    />
+                    <button
+                      type="submit"
+                      disabled={couponLoading || !couponInput.trim()}
+                      className="px-4 py-2 bg-boho-charcoal hover:bg-boho-charcoal/90 text-white rounded-xl text-xs font-bold transition-colors disabled:opacity-50 shrink-0"
+                    >
+                      {couponLoading ? 'Aplicando...' : 'Aplicar'}
+                    </button>
+                  </div>
+                  {couponFeedback && (
+                    <div className={`flex items-center space-x-1.5 text-[11px] p-2 rounded-xl ${
+                      couponFeedback.type === 'success'
+                        ? 'bg-emerald-50 text-emerald-800'
+                        : 'bg-red-50 text-red-700'
+                    }`}>
+                      {couponFeedback.type === 'success' ? (
+                        <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                      ) : (
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      )}
+                      <span>{couponFeedback.message}</span>
+                    </div>
+                  )}
+                </form>
+              )}
+            </div>
+
             {/* Calculations */}
             <div className="pt-4 border-t border-boho-sand-200 space-y-2 text-xs">
               <div className="flex justify-between text-boho-charcoal-muted">
                 <span>Subtotal</span>
                 <span className="font-semibold text-boho-charcoal">{formatPrice(subtotal)}</span>
               </div>
+
+              {discountAmount > 0 && (
+                <div className="flex justify-between text-emerald-700 font-semibold">
+                  <span>Descuento ({appliedCoupon?.code})</span>
+                  <span>-{formatPrice(discountAmount)}</span>
+                </div>
+              )}
+
               <div className="flex justify-between text-boho-charcoal-muted">
                 <span>Envío</span>
                 <span>

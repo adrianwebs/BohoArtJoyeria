@@ -392,6 +392,23 @@ export default function AdminOrdersPage() {
                 ))}
               </div>
 
+              <div className="pt-2 border-t border-boho-sand-100 space-y-1.5 text-xs px-2">
+                <div className="flex justify-between text-boho-charcoal-muted">
+                  <span>Subtotal</span>
+                  <span className="font-semibold text-boho-charcoal">{formatPrice(selectedOrder.subtotal)}</span>
+                </div>
+                {selectedOrder.discountAmount && selectedOrder.discountAmount > 0 ? (
+                  <div className="flex justify-between text-emerald-700 font-semibold">
+                    <span>Cupón Promocional ({selectedOrder.couponCode || 'PROMO'})</span>
+                    <span>-{formatPrice(selectedOrder.discountAmount)}</span>
+                  </div>
+                ) : null}
+                <div className="flex justify-between text-boho-charcoal-muted">
+                  <span>Gastos de Envío</span>
+                  <span>{selectedOrder.shippingCost > 0 ? formatPrice(selectedOrder.shippingCost) : 'Gratis'}</span>
+                </div>
+              </div>
+
               <div className="pt-2 flex justify-between items-center text-sm font-bold text-boho-charcoal px-2">
                 <span>Total Cobrado:</span>
                 <span className="text-boho-terracotta text-lg">{formatPrice(selectedOrder.totalAmount)}</span>

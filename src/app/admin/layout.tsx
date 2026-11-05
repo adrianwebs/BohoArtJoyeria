@@ -17,6 +17,7 @@ import {
   Menu,
   X,
   Sparkles,
+  Tag,
 } from 'lucide-react';
 
 const ADMIN_NAV = [
@@ -24,6 +25,7 @@ const ADMIN_NAV = [
   { name: 'Productos & Joyas', href: '/admin/productos', icon: Package },
   { name: 'Categorías', href: '/admin/categorias', icon: Layers },
   { name: 'Colecciones & Landings', href: '/admin/colecciones', icon: Sparkles },
+  { name: 'Descuentos & Cupones', href: '/admin/descuentos', icon: Tag },
   { name: 'Pedidos & Ventas', href: '/admin/pedidos', icon: ShoppingBag },
   { name: 'Clientes', href: '/admin/clientes', icon: Users },
   { name: 'Reseñas & Reviews', href: '/admin/reviews', icon: Star },

@@ -27,6 +27,8 @@ export function parseOrderInput(body: any): ParsedOrderInput | string {
     merged.set(productId, (merged.get(productId) ?? 0) + quantity);
   }
 
+  const couponCode = clean(body?.couponCode, 50).toUpperCase() || null;
+
   return {
     data: {
       customerName,
@@ -38,12 +40,14 @@ export function parseOrderInput(body: any): ParsedOrderInput | string {
       province: clean(body.province, 120) || city,
       country: clean(body.country, 60) || 'España',
       notes: clean(body.notes, 1000) || null,
+      couponCode,
+      discountAmount: 0,
     },
     items: [...merged].map(([productId, quantity]) => ({ productId, quantity })),
   };
 }
 
-/** Adapts parsed input to the storeService.createOrder signature (prices are recomputed server-side). */
+/** Adapts parsed input to the storeService.createOrder signature (prices and discounts are recomputed server-side). */
 export function toCreateOrder(
   parsed: ParsedOrderInput,
   extra: Pick<Order, 'status' | 'paymentMethod'> & { paypalOrderId?: string | null; notes?: string | null }
@@ -51,6 +55,8 @@ export function toCreateOrder(
   return {
     ...parsed.data,
     subtotal: 0,
+    discountAmount: 0,
+    couponCode: parsed.data.couponCode ?? null,
     shippingCost: 0,
     totalAmount: 0,
     trackingNumber: null,

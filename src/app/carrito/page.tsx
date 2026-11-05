@@ -1,9 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ShoppingBag, ArrowRight, Trash2, Plus, Minus, ArrowLeft, ShieldCheck, Sparkles } from 'lucide-react';
+import { ShoppingBag, ArrowRight, Trash2, Plus, Minus, ArrowLeft, ShieldCheck, Sparkles, Tag, X, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useCart } from '@/lib/cartContext';
 import { formatPrice } from '@/lib/utils';
 
@@ -15,12 +15,40 @@ export default function CartPage() {
     clearCart,
     subtotal,
     totalItems,
+    appliedCoupon,
+    discountAmount,
+    applyCoupon,
+    removeCoupon,
   } = useCart();
 
+  const [couponInput, setCouponInput] = useState('');
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponFeedback, setCouponFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  const discountedSubtotal = Math.max(0, subtotal - discountAmount);
   const freeShippingThreshold = 40.0;
-  const isFreeShipping = subtotal >= freeShippingThreshold;
+  const isFreeShipping = discountedSubtotal >= freeShippingThreshold;
   const shippingCost = isFreeShipping ? 0 : 3.95;
-  const total = subtotal + shippingCost;
+  const total = discountedSubtotal + shippingCost;
+
+  const handleApplyCoupon = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!couponInput.trim()) return;
+
+    setCouponLoading(true);
+    setCouponFeedback(null);
+    try {
+      const res = await applyCoupon(couponInput);
+      if (res.success) {
+        setCouponFeedback({ type: 'success', message: res.message });
+        setCouponInput('');
+      } else {
+        setCouponFeedback({ type: 'error', message: res.message });
+      }
+    } finally {
+      setCouponLoading(false);
+    }
+  };
 
   if (cart.length === 0) {
     return (
@@ -163,26 +191,104 @@ export default function CartPage() {
               Resumen del Pedido
             </h2>
 
+            {/* Promo Code Input in Cart */}
+            <div className="pb-4 border-b border-boho-sand-200">
+              {appliedCoupon ? (
+                <div className="p-3 bg-emerald-50/80 border border-emerald-200 rounded-2xl flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Tag className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <div>
+                      <span className="text-xs font-bold text-emerald-900 block">
+                        Cupón {appliedCoupon.code} aplicado
+                      </span>
+                      <span className="text-[11px] text-emerald-700">
+                        {appliedCoupon.discountType === 'PERCENTAGE'
+                          ? `${appliedCoupon.discountValue}% de descuento`
+                          : `${formatPrice(appliedCoupon.discountValue)} de descuento directo`}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      removeCoupon();
+                      setCouponFeedback(null);
+                    }}
+                    className="p-1 hover:bg-emerald-200/60 rounded-lg text-emerald-800 transition-colors"
+                    title="Eliminar cupón"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleApplyCoupon} className="space-y-2">
+                  <label className="block text-xs font-semibold text-boho-charcoal">
+                    Código Promocional
+                  </label>
+                  <div className="flex space-x-2">
+                    <input
+                      type="text"
+                      value={couponInput}
+                      onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                      placeholder="Ej. BOHO10"
+                      className="flex-1 px-3 py-2 text-xs uppercase font-mono tracking-wider bg-boho-sand-50 border border-boho-sand-300 rounded-xl focus:outline-none focus:border-boho-terracotta"
+                    />
+                    <button
+                      type="submit"
+                      disabled={couponLoading || !couponInput.trim()}
+                      className="px-3.5 py-2 bg-boho-charcoal hover:bg-boho-charcoal/90 text-white rounded-xl text-xs font-bold transition-colors disabled:opacity-50 shrink-0"
+                    >
+                      {couponLoading ? '...' : 'Aplicar'}
+                    </button>
+                  </div>
+                  {couponFeedback && (
+                    <div className={`flex items-center space-x-1.5 text-[11px] p-2 rounded-xl ${
+                      couponFeedback.type === 'success'
+                        ? 'bg-emerald-50 text-emerald-800'
+                        : 'bg-red-50 text-red-700'
+                    }`}>
+                      {couponFeedback.type === 'success' ? (
+                        <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                      ) : (
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      )}
+                      <span>{couponFeedback.message}</span>
+                    </div>
+                  )}
+                </form>
+              )}
+            </div>
+
             <div className="space-y-3 text-xs sm:text-sm">
               <div className="flex justify-between text-boho-charcoal-muted">
                 <span>Subtotal</span>
                 <span className="font-semibold text-boho-charcoal">{formatPrice(subtotal)}</span>
               </div>
+
+              {discountAmount > 0 && (
+                <div className="flex justify-between text-emerald-700 font-semibold">
+                  <span>Descuento ({appliedCoupon?.code})</span>
+                  <span>-{formatPrice(discountAmount)}</span>
+                </div>
+              )}
+
               <div className="flex justify-between text-boho-charcoal-muted">
                 <span>Gastos de Envío</span>
                 <span>
                   {isFreeShipping ? (
-                    <span className="text-boho-sage font-bold uppercase text-xs">Gratis</span>
+                    <span className="text-emerald-700 font-bold uppercase text-xs">Gratis</span>
                   ) : (
                     formatPrice(shippingCost)
                   )}
                 </span>
               </div>
+
               {!isFreeShipping && (
                 <p className="text-[11px] text-boho-terracotta bg-boho-sand-100 p-2 rounded-xl">
-                  💡 Te faltan {formatPrice(freeShippingThreshold - subtotal)} para conseguir <strong>Envío Gratis</strong>.
+                  💡 Te faltan {formatPrice(freeShippingThreshold - discountedSubtotal)} para conseguir <strong>Envío Gratis</strong>.
                 </p>
               )}
+
               <div className="pt-3 border-t border-boho-sand-200 flex justify-between text-lg font-bold text-boho-charcoal">
                 <span>Total</span>
                 <span className="text-boho-terracotta">{formatPrice(total)}</span>

@@ -6,9 +6,11 @@ import { apiError } from '@/lib/apiError';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    return NextResponse.json(await storeService.getCategories());
+    const { searchParams } = new URL(req.url);
+    const activeOnly = searchParams.get('all') !== 'true' && searchParams.get('admin') !== 'true';
+    return NextResponse.json(await storeService.getCategories({ activeOnly }));
   } catch (error) {
     return apiError(error, 'Error al cargar las categorías');
   }
@@ -32,6 +34,7 @@ export async function POST(req: Request) {
       description: body.description || null,
       image: body.image || null,
       sortOrder: Number(body.sortOrder) || 0,
+      isActive: body.isActive !== undefined ? Boolean(body.isActive) : true,
     });
     return NextResponse.json(category, { status: 201 });
   } catch (error) {

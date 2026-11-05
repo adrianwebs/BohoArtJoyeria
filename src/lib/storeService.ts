@@ -1,6 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from './prisma';
-import { Category, Product, Order, Review, StoreSetting, OrderStatus, Collection } from './types';
+import { Category, Product, Order, Review, StoreSetting, OrderStatus, Collection, Coupon, CouponValidationResult, DiscountType } from './types';
 import { resolveSchedule } from './collectionSchedule';
 
 const SETTINGS_ID = 'store-default';
@@ -35,6 +35,24 @@ function parseImages(raw: string | null | undefined): string[] {
 }
 
 type CategoryRow = Prisma.CategoryGetPayload<object>;
+type CouponRow = Prisma.CouponGetPayload<object>;
+
+function mapCoupon(c: CouponRow): Coupon {
+  return {
+    id: c.id,
+    code: c.code,
+    description: c.description,
+    discountType: c.discountType as DiscountType,
+    discountValue: num(c.discountValue),
+    minOrderAmount: numOrNull(c.minOrderAmount),
+    maxUses: c.maxUses,
+    usedCount: c.usedCount,
+    expiresAt: c.expiresAt ? c.expiresAt.toISOString() : null,
+    isActive: c.isActive,
+    createdAt: c.createdAt.toISOString(),
+  };
+}
+
 type ProductRow = Prisma.ProductGetPayload<{ include: { category: true } }>;
 
 function mapCategory(c: CategoryRow, productCount?: number): Category {
@@ -245,8 +263,9 @@ function mapCollection(
 
 export const storeService = {
   // --- CATEGORIES ---
-  async getCategories(): Promise<Category[]> {
+  async getCategories(params?: { activeOnly?: boolean }): Promise<Category[]> {
     const rows = await prisma.category.findMany({
+      where: params?.activeOnly ? { isActive: true } : undefined,
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
       include: { _count: { select: { products: { where: { isActive: true } } } } },
     });
@@ -270,6 +289,7 @@ export const storeService = {
           description: str(data.description),
           image: str(data.image),
           sortOrder: data.sortOrder ?? 0,
+          isActive: data.isActive !== undefined ? Boolean(data.isActive) : true,
         },
       });
       return mapCategory(c, 0);
@@ -288,6 +308,7 @@ export const storeService = {
           ...(data.description !== undefined && { description: str(data.description) }),
           ...(data.image !== undefined && { image: str(data.image) }),
           ...(data.sortOrder !== undefined && { sortOrder: data.sortOrder }),
+          ...(data.isActive !== undefined && { isActive: Boolean(data.isActive) }),
         },
         include: { _count: { select: { products: { where: { isActive: true } } } } },
       });
@@ -324,7 +345,10 @@ export const storeService = {
     sort?: 'price_asc' | 'price_desc' | 'newest' | 'rating';
   }): Promise<Product[]> {
     const where: Prisma.ProductWhereInput = {};
-    if (params?.activeOnly !== false) where.isActive = true;
+    if (params?.activeOnly !== false) {
+      where.isActive = true;
+      where.category = { isActive: true };
+    }
     if (params?.featured) where.isFeatured = true;
     if (params?.categorySlug) where.category = { slug: params.categorySlug };
     if (params?.search) {
@@ -495,8 +519,20 @@ export const storeService = {
 
     const settings = await this.getSettings();
     const subtotal = data.items.reduce((sum, i) => sum + num(byId.get(i.productId)!.price) * i.quantity, 0);
-    const shippingCost = subtotal >= settings.freeShippingThreshold ? 0 : settings.standardShippingCost;
-    const totalAmount = Math.round((subtotal + shippingCost) * 100) / 100;
+
+    let discountAmount = 0;
+    let couponCode: string | null = null;
+    if (data.couponCode) {
+      const couponValidation = await this.validateCoupon(data.couponCode, subtotal);
+      if (couponValidation.valid && couponValidation.discountAmount) {
+        discountAmount = couponValidation.discountAmount;
+        couponCode = couponValidation.coupon?.code || data.couponCode.toUpperCase().trim();
+      }
+    }
+
+    const discountedSubtotal = Math.max(0, subtotal - discountAmount);
+    const shippingCost = discountedSubtotal >= settings.freeShippingThreshold ? 0 : settings.standardShippingCost;
+    const totalAmount = Math.max(0, Math.round((discountedSubtotal + shippingCost) * 100) / 100);
     const orderNumber = `BH-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
 
     try {
@@ -508,6 +544,14 @@ export const storeService = {
           });
           if (res.count === 0) throw new StoreError('Stock insuficiente, inténtalo de nuevo.', 409);
         }
+
+        if (couponCode) {
+          await tx.coupon.updateMany({
+            where: { code: couponCode },
+            data: { usedCount: { increment: 1 } },
+          });
+        }
+
         return tx.order.create({
           data: {
             orderNumber,
@@ -520,6 +564,8 @@ export const storeService = {
             province: data.province,
             country: data.country,
             subtotal,
+            discountAmount,
+            couponCode,
             shippingCost,
             totalAmount,
             status: data.status,
@@ -763,4 +809,129 @@ export const storeService = {
       throw err;
     }
   },
+  // --- COUPONS / DESCUENTOS ---
+  async getCoupons(): Promise<Coupon[]> {
+    const list = await prisma.coupon.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+    return list.map(mapCoupon);
+  },
+
+  async getCouponById(id: string): Promise<Coupon | null> {
+    const c = await prisma.coupon.findUnique({ where: { id } });
+    return c ? mapCoupon(c) : null;
+  },
+
+  async getCouponByCode(code: string): Promise<Coupon | null> {
+    const clean = code.trim().toUpperCase();
+    const c = await prisma.coupon.findUnique({ where: { code: clean } });
+    return c ? mapCoupon(c) : null;
+  },
+
+  async createCoupon(data: Omit<Coupon, 'id' | 'usedCount' | 'createdAt'>): Promise<Coupon> {
+    const cleanCode = data.code.trim().toUpperCase();
+    const created = await prisma.coupon.create({
+      data: {
+        code: cleanCode,
+        description: data.description ?? null,
+        discountType: data.discountType,
+        discountValue: data.discountValue,
+        minOrderAmount: data.minOrderAmount ?? null,
+        maxUses: data.maxUses ?? null,
+        expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
+        isActive: data.isActive !== undefined ? Boolean(data.isActive) : true,
+      },
+    });
+    return mapCoupon(created);
+  },
+
+  async updateCoupon(id: string, data: Partial<Coupon>): Promise<Coupon | null> {
+    const existing = await prisma.coupon.findUnique({ where: { id } });
+    if (!existing) return null;
+
+    const updated = await prisma.coupon.update({
+      where: { id },
+      data: {
+        ...(data.code ? { code: data.code.trim().toUpperCase() } : {}),
+        ...(data.description !== undefined ? { description: data.description } : {}),
+        ...(data.discountType ? { discountType: data.discountType } : {}),
+        ...(data.discountValue !== undefined ? { discountValue: data.discountValue } : {}),
+        ...(data.minOrderAmount !== undefined ? { minOrderAmount: data.minOrderAmount } : {}),
+        ...(data.maxUses !== undefined ? { maxUses: data.maxUses } : {}),
+        ...(data.usedCount !== undefined ? { usedCount: data.usedCount } : {}),
+        ...(data.expiresAt !== undefined ? { expiresAt: data.expiresAt ? new Date(data.expiresAt) : null } : {}),
+        ...(data.isActive !== undefined ? { isActive: Boolean(data.isActive) } : {}),
+      },
+    });
+    return mapCoupon(updated);
+  },
+
+  async deleteCoupon(id: string): Promise<boolean> {
+    try {
+      await prisma.coupon.delete({ where: { id } });
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
+  async validateCoupon(code: string, subtotal: number): Promise<CouponValidationResult> {
+    const cleanCode = code ? code.trim().toUpperCase() : '';
+    if (!cleanCode) {
+      return { valid: false, message: 'Por favor, introduce un código promocional.' };
+    }
+
+    const c = await prisma.coupon.findUnique({ where: { code: cleanCode } });
+    if (!c) {
+      return { valid: false, message: `El código promocional "${cleanCode}" no existe o es incorrecto.` };
+    }
+
+    const coupon = mapCoupon(c);
+    if (!coupon.isActive) {
+      return { valid: false, message: `El código promocional "${cleanCode}" está desactivado temporalmente.` };
+    }
+
+    if (coupon.expiresAt) {
+      const expDate = new Date(coupon.expiresAt).getTime();
+      if (!isNaN(expDate) && expDate < Date.now()) {
+        const dateStr = new Date(coupon.expiresAt).toLocaleDateString('es-ES');
+        return { valid: false, message: `El código "${cleanCode}" ha caducado (finalizó el ${dateStr}).` };
+      }
+    }
+
+    if (coupon.maxUses && coupon.usedCount >= coupon.maxUses) {
+      return { valid: false, message: `El código "${cleanCode}" ha alcanzado el límite máximo de usos disponibles.` };
+    }
+
+    if (coupon.minOrderAmount && subtotal < coupon.minOrderAmount) {
+      return {
+        valid: false,
+        message: `El código "${cleanCode}" requiere un pedido mínimo de ${coupon.minOrderAmount.toFixed(2)}€ (tu subtotal actual es de ${subtotal.toFixed(2)}€).`,
+      };
+    }
+
+    let discountAmount = 0;
+    if (coupon.discountType === 'PERCENTAGE') {
+      discountAmount = Math.round((subtotal * coupon.discountValue / 100) * 100) / 100;
+    } else {
+      discountAmount = Math.min(coupon.discountValue, subtotal);
+    }
+    discountAmount = Math.min(discountAmount, subtotal);
+
+    return {
+      valid: true,
+      message: `¡Cupón ${cleanCode} aplicado con éxito! (-${discountAmount.toFixed(2)}€)`,
+      coupon,
+      discountAmount,
+    };
+  },
+
+  async incrementCouponUsage(code: string): Promise<void> {
+    const clean = code.trim().toUpperCase();
+    await prisma.coupon.updateMany({
+      where: { code: clean },
+      data: { usedCount: { increment: 1 } },
+    });
+  },
 };
+

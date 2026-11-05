@@ -150,6 +150,29 @@ export function CollectionsAdminClient({
     refresh();
   };
 
+  const handleToggleActive = async (c: Collection) => {
+    const nextActive = !c.isActive;
+    setCollections((prev) =>
+      prev.map((col) =>
+        col.id === c.id ? { ...col, isActive: nextActive, status: nextActive ? 'live' : 'inactive' } : col
+      )
+    );
+    try {
+      const res = await fetch(`/api/collections/${c.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: nextActive }),
+      });
+      if (!res.ok) {
+        throw new Error('Error al actualizar');
+      }
+      refresh();
+    } catch {
+      alert('Error al cambiar el estado de la colección.');
+      refresh();
+    }
+  };
+
   const q = productSearch.trim().toLowerCase();
   const visibleProducts = products.filter((p) => !q || p.name.toLowerCase().includes(q));
 
@@ -231,7 +254,18 @@ export function CollectionsAdminClient({
                   <ExternalLink className="w-3.5 h-3.5" />
                   <span>Ver landing</span>
                 </Link>
-                <div className="flex space-x-2">
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => handleToggleActive(c)}
+                    className={`p-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1 border transition-colors ${
+                      c.isActive
+                        ? 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100'
+                        : 'border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
+                    }`}
+                    title={c.isActive ? 'Desactivar colección' : 'Activar colección'}
+                  >
+                    <span>{c.isActive ? 'Desactivar' : 'Activar'}</span>
+                  </button>
                   <button
                     onClick={() => resetForm(c)}
                     className="p-1.5 hover:bg-boho-sand-200 rounded-lg text-boho-charcoal text-xs font-semibold flex items-center space-x-1"

@@ -16,6 +16,8 @@ export function CartDrawer() {
     updateQuantity,
     subtotal,
     totalItems,
+    appliedCoupon,
+    discountAmount,
   } = useCart();
 
   const freeShippingThreshold = 40.0;
@@ -172,6 +174,12 @@ export function CartDrawer() {
                   <span>Subtotal</span>
                   <span className="font-semibold text-boho-charcoal">{formatPrice(subtotal)}</span>
                 </div>
+                {discountAmount > 0 && (
+                  <div className="flex justify-between text-emerald-700 font-semibold">
+                    <span>Descuento ({appliedCoupon?.code})</span>
+                    <span>-{formatPrice(discountAmount)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-boho-charcoal-muted">
                   <span>Envío estimado</span>
                   <span>
@@ -185,7 +193,7 @@ export function CartDrawer() {
                 <div className="border-t border-boho-sand-200 pt-2 flex justify-between text-base font-bold text-boho-charcoal">
                   <span>Total</span>
                   <span className="text-boho-terracotta">
-                    {formatPrice(subtotal + (remainingForFreeShipping <= 0 ? 0 : 3.95))}
+                    {formatPrice(Math.max(0, subtotal - discountAmount) + (remainingForFreeShipping <= 0 ? 0 : 3.95))}
                   </span>
                 </div>
               </div>

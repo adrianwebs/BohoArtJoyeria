@@ -23,6 +23,7 @@ export async function PUT(
       ...(body.description !== undefined && { description: body.description }),
       ...(body.image !== undefined && { image: body.image }),
       ...(body.sortOrder !== undefined && { sortOrder: Number(body.sortOrder) || 0 }),
+      ...(body.isActive !== undefined && { isActive: Boolean(body.isActive) }),
     });
     if (!updated) {
       return NextResponse.json({ error: 'Categoría no encontrada' }, { status: 404 });

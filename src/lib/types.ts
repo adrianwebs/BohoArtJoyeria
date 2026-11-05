@@ -5,6 +5,7 @@ export interface Category {
   description?: string | null;
   image?: string | null;
   sortOrder: number;
+  isActive?: boolean;
   productCount?: number;
 }
 
@@ -56,6 +57,8 @@ export interface Order {
   province: string;
   country: string;
   subtotal: number;
+  discountAmount?: number;
+  couponCode?: string | null;
   shippingCost: number;
   totalAmount: number;
   status: OrderStatus;
@@ -133,4 +136,27 @@ export interface Collection {
   productCount?: number;
   productIds?: string[];
   products?: Product[];
+}
+
+export type DiscountType = 'PERCENTAGE' | 'FIXED';
+
+export interface Coupon {
+  id: string;
+  code: string;
+  description?: string | null;
+  discountType: DiscountType;
+  discountValue: number;
+  minOrderAmount?: number | null;
+  maxUses?: number | null;
+  usedCount: number;
+  expiresAt?: string | null;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface CouponValidationResult {
+  valid: boolean;
+  message: string;
+  coupon?: Coupon;
+  discountAmount?: number;
 }
