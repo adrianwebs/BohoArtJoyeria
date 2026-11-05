@@ -15,6 +15,7 @@ interface NavbarProps {
 
 export function Navbar({ categories = [], collections = [] }: NavbarProps) {
   const { openCart, totalItems } = useCart();
+  const activeCategories = categories.filter((c) => c.isActive !== false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -101,24 +102,15 @@ export function Navbar({ categories = [], collections = [] }: NavbarProps) {
             >
               Catálogo
             </Link>
-            <Link
-              href="/categorias/pendientes"
-              className="relative py-1 text-sm font-medium text-boho-charcoal hover:text-boho-terracotta transition-colors after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-0 hover:after:w-full after:bg-boho-terracotta after:transition-all after:duration-300"
-            >
-              Pendientes
-            </Link>
-            <Link
-              href="/categorias/pulseras"
-              className="relative py-1 text-sm font-medium text-boho-charcoal hover:text-boho-terracotta transition-colors after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-0 hover:after:w-full after:bg-boho-terracotta after:transition-all after:duration-300"
-            >
-              Pulseras
-            </Link>
-            <Link
-              href="/categorias/collares"
-              className="relative py-1 text-sm font-medium text-boho-charcoal hover:text-boho-terracotta transition-colors after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-0 hover:after:w-full after:bg-boho-terracotta after:transition-all after:duration-300"
-            >
-              Collares
-            </Link>
+            {activeCategories.slice(0, 4).map((cat) => (
+              <Link
+                key={cat.id}
+                href={`/categorias/${cat.slug}`}
+                className="relative py-1 text-sm font-medium text-boho-charcoal hover:text-boho-terracotta transition-colors after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-0 hover:after:w-full after:bg-boho-terracotta after:transition-all after:duration-300"
+              >
+                {cat.name}
+              </Link>
+            ))}
 
             {/* Colecciones Dropdown */}
             <div
@@ -240,37 +232,23 @@ export function Navbar({ categories = [], collections = [] }: NavbarProps) {
             >
               Catálogo Completo
             </Link>
-            <div className="pt-2 pb-1 px-3 text-xs uppercase tracking-wider text-boho-charcoal-muted font-semibold">
-              Categorías
-            </div>
-            <Link
-              href="/categorias/pendientes"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block pl-6 pr-3 py-1.5 text-sm text-boho-charcoal hover:text-boho-terracotta"
-            >
-              • Pendientes de Arcilla
-            </Link>
-            <Link
-              href="/categorias/pulseras"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block pl-6 pr-3 py-1.5 text-sm text-boho-charcoal hover:text-boho-terracotta"
-            >
-              • Pulseras & Brazaletes
-            </Link>
-            <Link
-              href="/categorias/collares"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block pl-6 pr-3 py-1.5 text-sm text-boho-charcoal hover:text-boho-terracotta"
-            >
-              • Collares & Colgantes
-            </Link>
-            <Link
-              href="/categorias/anillos"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block pl-6 pr-3 py-1.5 text-sm text-boho-charcoal hover:text-boho-terracotta"
-            >
-              • Anillos Esculpidos
-            </Link>
+            {activeCategories.length > 0 && (
+              <>
+                <div className="pt-2 pb-1 px-3 text-xs uppercase tracking-wider text-boho-charcoal-muted font-semibold">
+                  Categorías
+                </div>
+                {activeCategories.map((cat) => (
+                  <Link
+                    key={cat.id}
+                    href={`/categorias/${cat.slug}`}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block pl-6 pr-3 py-1.5 text-sm text-boho-charcoal hover:text-boho-terracotta"
+                  >
+                    • {cat.name}
+                  </Link>
+                ))}
+              </>
+            )}
             
             {/* Colecciones en mobile */}
             <div className="pt-2">

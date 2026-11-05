@@ -4,8 +4,10 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Instagram, Mail, Heart, Sparkles, Shield, RefreshCw, Send } from 'lucide-react';
+import { Category } from '@/lib/types';
 
-export function Footer() {
+export function Footer({ categories = [] }: { categories?: Category[] }) {
+  const activeCategories = categories.filter((c) => c.isActive !== false);
   return (
     <footer className="bg-boho-sand-100/80 border-t border-boho-sand-300 text-boho-charcoal pt-16 pb-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -107,31 +109,21 @@ export function Footer() {
               Colecciones
             </h5>
             <ul className="space-y-2.5 text-xs text-boho-charcoal-muted">
-              <li>
-                <Link href="/categorias/pendientes" className="hover:text-boho-terracotta transition-colors">
-                  Pendientes de Arcilla
-                </Link>
-              </li>
-              <li>
-                <Link href="/categorias/pulseras" className="hover:text-boho-terracotta transition-colors">
-                  Pulseras & Brazaletes
-                </Link>
-              </li>
-              <li>
-                <Link href="/categorias/collares" className="hover:text-boho-terracotta transition-colors">
-                  Collares & Medallones
-                </Link>
-              </li>
-              <li>
-                <Link href="/categorias/anillos" className="hover:text-boho-terracotta transition-colors">
-                  Anillos Esculpidos
-                </Link>
-              </li>
-              <li>
-                <Link href="/categorias/colecciones" className="hover:text-boho-terracotta transition-colors">
-                  Packs de Regalo
-                </Link>
-              </li>
+              {activeCategories.length > 0 ? (
+                activeCategories.slice(0, 6).map((cat) => (
+                  <li key={cat.id}>
+                    <Link href={`/categorias/${cat.slug}`} className="hover:text-boho-terracotta transition-colors">
+                      {cat.name}
+                    </Link>
+                  </li>
+                ))
+              ) : (
+                <li>
+                  <Link href="/catalogo" className="hover:text-boho-terracotta transition-colors">
+                    Ver Catálogo Completo
+                  </Link>
+                </li>
+              )}
             </ul>
           </div>
 

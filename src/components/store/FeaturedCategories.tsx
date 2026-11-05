@@ -10,6 +10,10 @@ interface FeaturedCategoriesProps {
 }
 
 export function FeaturedCategories({ categories, categoryImages = {} }: FeaturedCategoriesProps) {
+  const visibleCategories = categories.filter((c) => c.isActive !== false);
+
+  if (visibleCategories.length === 0) return null;
+
   return (
     <section className="py-16 md:py-20 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -29,7 +33,7 @@ export function FeaturedCategories({ categories, categoryImages = {} }: Featured
 
         {/* Categories Grid */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6">
-          {categories.map((category) => {
+          {visibleCategories.map((category) => {
             const catImage =
               category.image && !category.image.includes('unsplash.com')
                 ? category.image
@@ -51,20 +55,20 @@ export function FeaturedCategories({ categories, categoryImages = {} }: Featured
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-transparent group-hover:from-black/80 transition-colors duration-300" />
                 
-                <div className="absolute inset-x-3 bottom-3 text-white text-center transform transition-transform duration-300 group-hover:-translate-y-0.5">
-                  <h3 className="font-serif-boho text-sm sm:text-base font-bold tracking-tight mb-0.5">
-                    {category.name}
-                  </h3>
-                  <span className="text-[11px] font-medium text-boho-sand-200 group-hover:text-white flex items-center justify-center space-x-1 transition-colors">
-                    <span>Ver colección</span>
-                    <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform duration-300" />
-                  </span>
+                  <div className="absolute inset-x-3 bottom-3 text-white text-center transform transition-transform duration-300 group-hover:-translate-y-0.5">
+                    <h3 className="font-serif-boho text-sm sm:text-base font-bold tracking-tight mb-0.5">
+                      {category.name}
+                    </h3>
+                    <span className="text-[11px] font-medium text-boho-sand-200 group-hover:text-white flex items-center justify-center space-x-1 transition-colors">
+                      <span>Ver colección</span>
+                      <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform duration-300" />
+                    </span>
+                  </div>
                 </div>
-              </div>
-            </Link>
-          );
-        })}
-      </div>
+              </Link>
+            );
+          })}
+        </div>
 
       </div>
     </section>

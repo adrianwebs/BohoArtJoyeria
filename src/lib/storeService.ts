@@ -265,19 +265,21 @@ export const storeService = {
   // --- CATEGORIES ---
   async getCategories(params?: { activeOnly?: boolean }): Promise<Category[]> {
     const rows = await prisma.category.findMany({
-      where: params?.activeOnly ? { isActive: true } : undefined,
+      where: params?.activeOnly === false ? undefined : { isActive: true },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
       include: { _count: { select: { products: { where: { isActive: true } } } } },
     });
     return rows.map((c) => mapCategory(c, c._count.products));
   },
 
-  async getCategoryBySlug(slug: string): Promise<Category | null> {
+  async getCategoryBySlug(slug: string, opts?: { includeInactive?: boolean }): Promise<Category | null> {
     const c = await prisma.category.findUnique({
       where: { slug },
       include: { _count: { select: { products: { where: { isActive: true } } } } },
     });
-    return c ? mapCategory(c, c._count.products) : null;
+    if (!c) return null;
+    if (!opts?.includeInactive && !c.isActive) return null;
+    return mapCategory(c, c._count.products);
   },
 
   async createCategory(data: Omit<Category, 'id'>): Promise<Category> {

@@ -4,7 +4,7 @@ import { ProductsAdminClient } from './ProductsAdminClient';
 
 export default async function AdminProductsPage() {
   const products = await storeService.getProducts({ activeOnly: false });
-  const categories = await storeService.getCategories();
+  const categories = await storeService.getCategories({ activeOnly: false });
 
   return (
     <div className="space-y-6">

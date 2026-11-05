@@ -45,7 +45,7 @@ export function StoreLayoutWrapper({
       <main className="flex-1">
         {children}
       </main>
-      <Footer />
+      <Footer categories={categories} />
       <CartDrawer />
     </>
   );
