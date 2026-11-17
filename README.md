@@ -74,6 +74,17 @@ Tienda online completa y moderna para **Bohoart Jewelry**, desarrollada con **Ne
 
 ---
 
+## 🎨 Talleres
+
+Módulo de talleres con reserva online (`/talleres`, `/talleres/[slug]`) y gestión en `/admin/talleres`.
+
+- Tras actualizar el código ejecuta `npx prisma db push` para crear las tablas nuevas (`Workshop*`).
+- **Señal no reembolsable**: se paga online (importe fijo por plaza o % del precio, configurable por taller); el resto se paga el día del taller.
+- **Plazas**: solo se descuentan cuando la reserva queda pagada (PAYPAL o REDSYS) y de forma atómica, para no sobrevender.
+- **PayPal**: reutiliza `PAYPAL_CLIENT_ID` / `PAYPAL_CLIENT_SECRET` / `PAYPAL_MODE`.
+- **Redsys (tarjeta)**: define `REDSYS_MERCHANT_CODE`, `REDSYS_TERMINAL`, `REDSYS_SECRET_KEY` y `REDSYS_ENV=test|live` (ver `.env.example`; nunca subas claves reales). En el panel de Redsys configura la URL de notificación `https://TU_DOMINIO/api/payments/redsys/notify`. La firma es HMAC-SHA256 y la ruta rechaza cualquier notificación con firma o importe incorrectos.
+- **Correos**: usan el SMTP existente (`SMTP_*`); el aviso a la tienda va a `ORDER_NOTIFY_EMAIL` o al email de contacto de la tienda.
+
 ## 🚀 Puesta en Marcha en Desarrollo
 
 1. **Instalar dependencias**:

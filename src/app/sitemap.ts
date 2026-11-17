@@ -1,5 +1,6 @@
 import { MetadataRoute } from 'next';
 import { storeService } from '@/lib/storeService';
+import { getPublicWorkshops } from '@/lib/workshopService';
 
 export const dynamic = 'force-dynamic';
 
@@ -71,5 +72,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.85,
     }));
 
-  return [...staticRoutes, ...collectionRoutes, ...categoryRoutes, ...productRoutes];
+  const workshopRoutes: MetadataRoute.Sitemap = [
+    { url: `${baseUrl}/talleres`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.8 },
+    ...(await getPublicWorkshops()).map((w) => ({
+      url: `${baseUrl}/talleres/${w.slug}`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly' as const,
+      priority: 0.75,
+    })),
+  ];
+
+  return [...staticRoutes, ...workshopRoutes, ...collectionRoutes, ...categoryRoutes, ...productRoutes];
 }
