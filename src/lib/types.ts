@@ -31,6 +31,10 @@ export interface Product {
   createdAt: string;
   rating?: number;
   reviewCount?: number;
+  /** True when the product has active variants (price/stock then depend on the chosen combination). */
+  hasVariants?: boolean;
+  /** Only loaded on the detail page and admin: active (public) or all (admin) combinations. */
+  variants?: ProductVariant[];
 }
 
 export interface OrderItem {
@@ -41,6 +45,8 @@ export interface OrderItem {
   productImage?: string | null;
   unitPrice: number;
   quantity: number;
+  variantId?: string | null;
+  variantLabel?: string | null;
 }
 
 export type OrderStatus = 'PENDING' | 'PAID' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
@@ -101,9 +107,60 @@ export interface StoreSetting {
   maintenanceMessage?: string;
 }
 
+export interface CartVariant {
+  id: string;
+  label: string;
+  price: number;
+  stock: number;
+  image?: string | null;
+}
+
 export interface CartItem {
   product: Product;
+  variant?: CartVariant | null;
   quantity: number;
+}
+
+export type AttributeGroupType = 'select' | 'color' | 'radio';
+
+export interface AttributeValue {
+  id: string;
+  groupId: string;
+  name: string;
+  hex?: string | null;
+  isMulticolor: boolean;
+  sortOrder: number;
+}
+
+export interface AttributeGroup {
+  id: string;
+  name: string;
+  type: AttributeGroupType;
+  sortOrder: number;
+  values: AttributeValue[];
+}
+
+export interface VariantValue extends AttributeValue {
+  groupName: string;
+  groupType: AttributeGroupType;
+}
+
+export interface ProductVariant {
+  id: string;
+  productId: string;
+  sku?: string | null;
+  /** Final unit price (own price, or product price + adjustment). */
+  price: number;
+  /** Own price set by the admin; null = derived from the product price. */
+  priceOverride?: number | null;
+  priceAdjustment: number;
+  stock: number;
+  image?: string | null;
+  isActive: boolean;
+  sortOrder: number;
+  values: VariantValue[];
+  /** "Color: Rojo · Talla: M" */
+  label: string;
 }
 
 export interface AdminUser {
@@ -122,6 +179,8 @@ export interface Collection {
   tagline?: string | null;
   description?: string | null;
   heroImage?: string | null;
+  /** Hero image, or the first active product image as a fallback (public listings). */
+  coverImage?: string | null;
   accentColor: string;
   startsAt?: string | null; // original configured dates (ISO)
   endsAt?: string | null;

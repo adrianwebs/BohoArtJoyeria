@@ -19,7 +19,7 @@ export default async function CollectionsIndexPage() {
   const upcoming = collections.filter((c) => c.status === 'scheduled');
 
   const Card = ({ c, soon }: { c: (typeof collections)[number]; soon?: boolean }) => {
-    const cover = c.heroImage || (c.products && c.products[0]?.images?.[0]) || null;
+    const cover = c.coverImage || c.heroImage || null;
     return (
       <Link
         href={`/colecciones/${c.slug}`}

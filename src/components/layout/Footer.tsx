@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Instagram, Mail, Heart, Sparkles, Shield, RefreshCw, Send } from 'lucide-react';
 import { Category } from '@/lib/types';
+import { NewsletterForm } from '@/components/marketing/NewsletterForm';
 
 export function Footer({ categories = [] }: { categories?: Category[] }) {
   const activeCategories = categories.filter((c) => c.isActive !== false);
@@ -85,21 +86,7 @@ export function Footer({ categories = [] }: { categories?: Category[] }) {
               <h5 className="text-xs font-bold uppercase tracking-wider text-boho-charcoal mb-2">
                 Únete al Club Bohoart (10% Dto. en tu 1º pedido)
               </h5>
-              <form onSubmit={(e) => { e.preventDefault(); alert('¡Gracias por suscribirte a Bohoart Jewelry!'); }} className="flex max-w-sm">
-                <input
-                  type="email"
-                  placeholder="Tu correo electrónico..."
-                  required
-                  className="px-3.5 py-2 text-xs bg-white border border-boho-sand-300 rounded-l-full flex-1 focus:outline-none focus:border-boho-terracotta"
-                />
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-boho-terracotta hover:bg-boho-terracotta-600 text-white rounded-r-full text-xs font-semibold flex items-center space-x-1 transition-colors"
-                >
-                  <span>Unirme</span>
-                  <Send className="w-3 h-3" />
-                </button>
-              </form>
+              <NewsletterForm source="footer" />
             </div>
           </div>
 

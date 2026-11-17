@@ -18,14 +18,20 @@ import {
   X,
   Sparkles,
   Tag,
+  Palette,
+  SlidersHorizontal,
+  Mail,
 } from 'lucide-react';
 
 const ADMIN_NAV = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
   { name: 'Productos & Joyas', href: '/admin/productos', icon: Package },
   { name: 'Categorías', href: '/admin/categorias', icon: Layers },
+  { name: 'Atributos & Variantes', href: '/admin/atributos', icon: SlidersHorizontal },
   { name: 'Colecciones & Landings', href: '/admin/colecciones', icon: Sparkles },
   { name: 'Descuentos & Cupones', href: '/admin/descuentos', icon: Tag },
+  { name: 'Talleres', href: '/admin/talleres', icon: Palette },
+  { name: 'Newsletter', href: '/admin/newsletter', icon: Mail },
   { name: 'Pedidos & Ventas', href: '/admin/pedidos', icon: ShoppingBag },
   { name: 'Clientes', href: '/admin/clientes', icon: Users },
   { name: 'Reseñas & Reviews', href: '/admin/reviews', icon: Star },

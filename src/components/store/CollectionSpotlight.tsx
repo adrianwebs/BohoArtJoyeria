@@ -7,7 +7,7 @@ import { Countdown } from './Countdown';
 
 /** Home-page banner for the collection that is currently live (seasonal campaign). */
 export function CollectionSpotlight({ collection }: { collection: Collection }) {
-  const coverImage = collection.heroImage || collection.products?.[0]?.images?.[0];
+  const coverImage = collection.coverImage || collection.heroImage || collection.products?.[0]?.images?.[0];
 
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10">

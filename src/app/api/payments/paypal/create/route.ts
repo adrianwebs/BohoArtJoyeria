@@ -13,8 +13,9 @@ export async function POST(req: Request) {
     }
     const body = await req.json();
     const items = Array.isArray(body.items)
-      ? body.items.map((i: { productId?: string; quantity?: number }) => ({
+      ? body.items.map((i: { productId?: string; variantId?: string | null; quantity?: number }) => ({
           productId: String(i.productId),
+          variantId: i.variantId ? String(i.variantId) : null,
           quantity: Math.floor(Number(i.quantity)) || 0,
         }))
       : [];

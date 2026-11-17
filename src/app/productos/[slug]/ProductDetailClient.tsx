@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import Image from 'next/image';
 import {
   ShoppingBag,
@@ -15,9 +15,11 @@ import {
   Minus,
   Check,
 } from 'lucide-react';
-import { Product } from '@/lib/types';
+import { Product, ProductVariant, VariantValue } from '@/lib/types';
+import { AttributeSwatch } from '@/components/store/AttributeSwatch';
 import { useCart } from '@/lib/cartContext';
 import { formatPrice } from '@/lib/utils';
+import { StockNotifyForm } from '@/components/marketing/StockNotifyForm';
 
 interface ProductDetailClientProps {
   product: Product;
@@ -30,17 +32,84 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   const [activeTab, setActiveTab] = useState<'materials' | 'shipping' | 'care'>('materials');
   const [addedAnimation, setAddedAnimation] = useState(false);
 
+  // --- Variants: one selector per attribute group; the chosen combination drives price, stock and image ---
+  const variants = useMemo(() => product.variants ?? [], [product.variants]);
+  const groups = useMemo(() => {
+    const map = new Map<string, { id: string; name: string; type: VariantValue['groupType']; values: VariantValue[] }>();
+    for (const v of variants) {
+      for (const val of v.values) {
+        let g = map.get(val.groupId);
+        if (!g) {
+          g = { id: val.groupId, name: val.groupName, type: val.groupType, values: [] };
+          map.set(val.groupId, g);
+        }
+        if (!g.values.some((x) => x.id === val.id)) g.values.push(val);
+      }
+    }
+    for (const g of map.values()) g.values.sort((a, b) => a.sortOrder - b.sortOrder);
+    return [...map.values()];
+  }, [variants]);
+
+  const [selection, setSelection] = useState<Record<string, string>>(() => {
+    const first = variants.find((v) => v.stock > 0) ?? variants[0];
+    return first ? Object.fromEntries(first.values.map((x) => [x.groupId, x.id])) : {};
+  });
+  const [imageOverride, setImageOverride] = useState(true);
+
+  const selectedVariant: ProductVariant | undefined = variants.find(
+    (v) => groups.length > 0 && groups.every((g) => v.values.some((x) => x.id === selection[g.id]))
+  );
+  const hasVariants = variants.length > 0;
+
+  /** A value is selectable when some in-stock combination contains it together with the other chosen values. */
+  const isValueAvailable = (groupId: string, valueId: string) =>
+    variants.some(
+      (v) =>
+        v.stock > 0 &&
+        v.values.some((x) => x.id === valueId) &&
+        Object.entries(selection).every(
+          ([gid, vid]) => gid === groupId || v.values.some((x) => x.id === vid)
+        )
+    );
+
+  const selectValue = (groupId: string, valueId: string) => {
+    setSelection((prev) => {
+      const next = { ...prev, [groupId]: valueId };
+      // If the new combination does not exist / is out of stock, move the other groups to the closest in-stock one.
+      const ok = variants.some((v) => v.stock > 0 && groups.every((g) => v.values.some((x) => x.id === next[g.id])));
+      if (ok) return next;
+      const fallback = variants.find((v) => v.stock > 0 && v.values.some((x) => x.id === valueId));
+      return fallback ? Object.fromEntries(fallback.values.map((x) => [x.groupId, x.id])) : next;
+    });
+    setImageOverride(true);
+  };
+
+  const currentPrice = hasVariants ? (selectedVariant?.price ?? product.price) : product.price;
+  const currentStock = hasVariants ? (selectedVariant?.stock ?? 0) : product.stock;
+  const variantImage = hasVariants && imageOverride ? selectedVariant?.image : null;
+
   const images = product.images.length > 0
     ? product.images
     : ['https://images.unsplash.com/photo-1630019852942-f89202989a59?w=800&auto=format&fit=crop&q=80'];
 
-  const hasDiscount = product.comparePrice && product.comparePrice > product.price;
+  const hasDiscount = product.comparePrice && product.comparePrice > currentPrice;
   const discountPercent = hasDiscount
-    ? Math.round(((product.comparePrice! - product.price) / product.comparePrice!) * 100)
+    ? Math.round(((product.comparePrice! - currentPrice) / product.comparePrice!) * 100)
     : 0;
 
   const handleAddToCart = () => {
-    addToCart(product, quantity);
+    if (hasVariants) {
+      if (!selectedVariant || selectedVariant.stock <= 0) return;
+      addToCart(product, quantity, {
+        id: selectedVariant.id,
+        label: selectedVariant.label,
+        price: selectedVariant.price,
+        stock: selectedVariant.stock,
+        image: selectedVariant.image ?? null,
+      });
+    } else {
+      addToCart(product, quantity);
+    }
     setAddedAnimation(true);
     setTimeout(() => setAddedAnimation(false), 2000);
   };
@@ -53,7 +122,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
         {/* Main large image */}
         <div className="relative aspect-[4/5] w-full rounded-3xl overflow-hidden bg-white border border-boho-sand-200 shadow-card">
           <Image
-            src={images[selectedImageIndex] || images[0]}
+            src={variantImage || images[selectedImageIndex] || images[0]}
             alt={product.name}
             fill
             priority
@@ -83,9 +152,12 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             {images.map((img, idx) => (
               <button
                 key={idx}
-                onClick={() => setSelectedImageIndex(idx)}
+                onClick={() => {
+                  setSelectedImageIndex(idx);
+                  setImageOverride(false);
+                }}
                 className={`relative w-20 h-20 rounded-2xl overflow-hidden shrink-0 border-2 transition-all shadow-soft ${
-                  selectedImageIndex === idx
+                  !variantImage && selectedImageIndex === idx
                     ? 'border-boho-terracotta ring-2 ring-boho-terracotta/20 scale-105'
                     : 'border-boho-sand-300 opacity-70 hover:opacity-100'
                 }`}
@@ -137,7 +209,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
         <div className="p-4 rounded-2xl bg-white border border-boho-sand-200 shadow-soft flex items-baseline justify-between">
           <div className="flex items-baseline space-x-3">
             <span className="font-serif-boho text-3xl font-extrabold text-boho-charcoal">
-              {formatPrice(product.price)}
+              {formatPrice(currentPrice)}
             </span>
             {hasDiscount && (
               <span className="text-base text-boho-charcoal-muted line-through">
@@ -155,13 +227,87 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
           {product.description}
         </div>
 
+        {/* Variant selectors */}
+        {hasVariants && (
+          <div className="space-y-4">
+            {groups.map((g) => {
+              const chosen = g.values.find((x) => x.id === selection[g.id]);
+              return (
+                <div key={g.id}>
+                  <div className="text-xs font-bold uppercase tracking-wider text-boho-charcoal mb-2">
+                    {g.name}
+                    {chosen && <span className="ml-1.5 font-medium normal-case tracking-normal text-boho-charcoal-muted">{chosen.name}</span>}
+                  </div>
+                  {g.type === 'select' ? (
+                    <select
+                      value={selection[g.id] ?? ''}
+                      onChange={(e) => selectValue(g.id, e.target.value)}
+                      className="w-full px-4 py-2.5 text-sm bg-white border border-boho-sand-300 rounded-xl focus:outline-none focus:border-boho-terracotta"
+                    >
+                      {g.values.map((val) => (
+                        <option key={val.id} value={val.id} disabled={!isValueAvailable(g.id, val.id)}>
+                          {val.name}
+                          {!isValueAvailable(g.id, val.id) ? ' (agotado)' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {g.values.map((val) => {
+                        const active = selection[g.id] === val.id;
+                        const available = isValueAvailable(g.id, val.id);
+                        return g.type === 'color' ? (
+                          <button
+                            key={val.id}
+                            type="button"
+                            onClick={() => selectValue(g.id, val.id)}
+                            disabled={!available}
+                            title={available ? val.name : `${val.name} (agotado)`}
+                            aria-label={val.name}
+                            aria-pressed={active}
+                            className={`relative p-1 rounded-full border-2 transition-all ${
+                              active ? 'border-boho-terracotta' : 'border-transparent hover:border-boho-sand-300'
+                            } ${available ? '' : 'opacity-40 cursor-not-allowed'}`}
+                          >
+                            <AttributeSwatch hex={val.hex} isMulticolor={val.isMulticolor} size={28} />
+                            {!available && (
+                              <span className="absolute inset-1 flex items-center justify-center">
+                                <span className="block w-full h-px bg-boho-charcoal rotate-45" />
+                              </span>
+                            )}
+                          </button>
+                        ) : (
+                          <button
+                            key={val.id}
+                            type="button"
+                            onClick={() => selectValue(g.id, val.id)}
+                            disabled={!available}
+                            aria-pressed={active}
+                            className={`px-4 py-2 rounded-full text-xs font-semibold border-2 transition-all ${
+                              active
+                                ? 'border-boho-terracotta bg-boho-terracotta/10 text-boho-terracotta'
+                                : 'border-boho-sand-300 bg-white text-boho-charcoal hover:border-boho-terracotta'
+                            } ${available ? '' : 'opacity-40 line-through cursor-not-allowed'}`}
+                          >
+                            {val.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         {/* Stock & Delivery Alerts */}
         <div className="space-y-2 pt-2">
           <div className="flex items-center space-x-2 text-xs font-medium text-boho-charcoal">
             <span className="w-2.5 h-2.5 rounded-full bg-boho-sage animate-pulse" />
             <span>
-              {product.stock > 0
-                ? `En stock para envío inmediato (${product.stock} disponibles)`
+              {currentStock > 0
+                ? `En stock para envío inmediato (${currentStock} disponibles)`
                 : 'Agotado temporalmente'}
             </span>
           </div>
@@ -170,6 +316,8 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             <span>Entrega estimada en 24-48 horas con número de seguimiento.</span>
           </div>
         </div>
+
+        {product.stock <= 0 && <StockNotifyForm productId={product.id} />}
 
         {/* Quantity and Add to Cart Button */}
         <div className="space-y-3 pt-2">
@@ -185,7 +333,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
               </button>
               <span className="px-4 text-sm font-bold text-boho-charcoal">{quantity}</span>
               <button
-                onClick={() => setQuantity(quantity + 1)}
+                onClick={() => setQuantity(currentStock > 0 ? Math.min(quantity + 1, currentStock) : quantity + 1)}
                 className="p-1 text-boho-charcoal-muted hover:text-boho-charcoal active:scale-90 transition-all"
                 aria-label="Sumar unidad"
               >
@@ -196,7 +344,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             {/* Add to Cart CTA */}
             <button
               onClick={handleAddToCart}
-              disabled={product.stock <= 0}
+              disabled={currentStock <= 0 || (hasVariants && !selectedVariant)}
               className={`flex-1 py-4 px-6 rounded-full font-bold text-sm shadow-md flex items-center justify-center space-x-2 active:scale-95 transition-all duration-300 ${
                 addedAnimation
                   ? 'bg-boho-sage text-white scale-[1.02]'
@@ -211,7 +359,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
               ) : (
                 <>
                   <ShoppingBag className="w-5 h-5" />
-                  <span>Añadir a la Cesta • {formatPrice(product.price * quantity)}</span>
+                  <span>Añadir a la Cesta • {formatPrice(currentPrice * quantity)}</span>
                 </>
               )}
             </button>
@@ -244,9 +392,9 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                 <p>
                   <strong className="text-boho-charcoal">Peso ultraligero:</strong> ~{product.weightGrams || 4} gramos por pieza (no deforma el lóbulo).
                 </p>
-                {product.sku && (
+                {(selectedVariant?.sku || product.sku) && (
                   <p>
-                    <strong className="text-boho-charcoal">Referencia / SKU:</strong> {product.sku}
+                    <strong className="text-boho-charcoal">Referencia / SKU:</strong> {selectedVariant?.sku || product.sku}
                   </p>
                 )}
               </div>

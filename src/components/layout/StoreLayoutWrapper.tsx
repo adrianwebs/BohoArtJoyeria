@@ -7,6 +7,7 @@ import { Navbar } from './Navbar';
 import { Footer } from './Footer';
 import { CartDrawer } from './CartDrawer';
 import { Category } from '@/lib/types';
+import { DiscountPopup } from '@/components/marketing/DiscountPopup';
 
 interface StoreLayoutWrapperProps {
   children: React.ReactNode;
@@ -47,6 +48,7 @@ export function StoreLayoutWrapper({
       </main>
       <Footer categories={categories} />
       <CartDrawer />
+      <DiscountPopup />
     </>
   );
 }

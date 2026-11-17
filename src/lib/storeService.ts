@@ -1,7 +1,8 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from './prisma';
-import { Category, Product, Order, Review, StoreSetting, OrderStatus, Collection, Coupon, CouponValidationResult, DiscountType } from './types';
+import { Category, Product, Order, Review, StoreSetting, OrderStatus, Collection, Coupon, CouponValidationResult, DiscountType, AttributeGroup, AttributeGroupType, ProductVariant, VariantValue } from './types';
 import { resolveSchedule } from './collectionSchedule';
+import { markCartOrdered, notifyStockAvailable } from './marketing';
 
 const SETTINGS_ID = 'store-default';
 
@@ -53,7 +54,74 @@ function mapCoupon(c: CouponRow): Coupon {
   };
 }
 
-type ProductRow = Prisma.ProductGetPayload<{ include: { category: true } }>;
+type ProductRow = Prisma.ProductGetPayload<{ include: { category: true } }> & { _count?: { variants: number } };
+
+/** Loads the category plus how many active variants the product has (to flag products that need a combination). */
+const productInclude = {
+  category: true,
+  _count: { select: { variants: { where: { isActive: true } } } },
+} satisfies Prisma.ProductInclude;
+
+const variantInclude = {
+  values: { include: { value: { include: { group: true } } } },
+} satisfies Prisma.ProductVariantInclude;
+type VariantRow = Prisma.ProductVariantGetPayload<{ include: typeof variantInclude }>;
+
+function mapVariant(v: VariantRow, productPrice: number): ProductVariant {
+  const values: VariantValue[] = v.values
+    .map((vv) => ({
+      id: vv.value.id,
+      groupId: vv.value.groupId,
+      name: vv.value.name,
+      hex: vv.value.hex,
+      isMulticolor: vv.value.isMulticolor,
+      sortOrder: vv.value.sortOrder,
+      groupName: vv.value.group.name,
+      groupType: vv.value.group.type as AttributeGroupType,
+      _g: vv.value.group.sortOrder,
+    }))
+    .sort((a, b) => a._g - b._g || a.sortOrder - b.sortOrder)
+    .map(({ _g, ...rest }) => rest);
+  const override = numOrNull(v.price);
+  return {
+    id: v.id,
+    productId: v.productId,
+    sku: v.sku,
+    price: override ?? Math.round((productPrice + num(v.priceAdjustment)) * 100) / 100,
+    priceOverride: override,
+    priceAdjustment: num(v.priceAdjustment),
+    stock: v.stock,
+    image: v.image,
+    isActive: v.isActive,
+    sortOrder: v.sortOrder,
+    values,
+    label: values.map((x) => `${x.groupName}: ${x.name}`).join(' · '),
+  };
+}
+
+function mapAttributeValue(v: Prisma.AttributeValueGetPayload<object>): AttributeGroup['values'][number] {
+  return { id: v.id, groupId: v.groupId, name: v.name, hex: v.hex, isMulticolor: v.isMulticolor, sortOrder: v.sortOrder };
+}
+
+function mapAttributeGroup(g: Prisma.AttributeGroupGetPayload<{ include: { values: true } }>): AttributeGroup {
+  return {
+    id: g.id,
+    name: g.name,
+    type: g.type as AttributeGroupType,
+    sortOrder: g.sortOrder,
+    values: g.values.map(mapAttributeValue),
+  };
+}
+
+const variantKey = (valueIds: string[]) => [...valueIds].sort().join('|');
+
+/** Keeps Product.stock equal to the sum of its active variants' stock (no-op for products without variants). */
+async function syncProductStock(tx: Prisma.TransactionClient, productId: string) {
+  const variants = await tx.productVariant.findMany({ where: { productId }, select: { stock: true, isActive: true } });
+  if (variants.length === 0) return;
+  const total = variants.filter((v) => v.isActive).reduce((sum, v) => sum + Math.max(0, v.stock), 0);
+  await tx.product.update({ where: { id: productId }, data: { stock: total } });
+}
 
 function mapCategory(c: CategoryRow, productCount?: number): Category {
   return {
@@ -90,6 +158,7 @@ function mapProduct(p: ProductRow, rating?: { avg: number; count: number }): Pro
     createdAt: p.createdAt.toISOString(),
     rating: rating?.count ? Math.round(rating.avg * 10) / 10 : 5,
     reviewCount: rating?.count ?? 0,
+    hasVariants: (p._count?.variants ?? 0) > 0,
   };
 }
 
@@ -139,6 +208,8 @@ function mapOrder(
       productImage: i.productImage,
       unitPrice: num(i.unitPrice),
       quantity: i.quantity,
+      variantId: i.variantId,
+      variantLabel: i.variantLabel,
     })),
   };
 }
@@ -366,7 +437,7 @@ export const storeService = {
     if (params?.sort === 'price_asc') orderBy = { price: 'asc' };
     if (params?.sort === 'price_desc') orderBy = { price: 'desc' };
 
-    const rows = await prisma.product.findMany({ where, orderBy, include: { category: true } });
+    const rows = await prisma.product.findMany({ where, orderBy, include: productInclude });
     const ratings = await ratingsByProduct(rows.map((r) => r.id));
     const list = rows.map((r) => mapProduct(r, ratings.get(r.id)));
     if (params?.sort === 'rating') list.sort((a, b) => (b.rating || 0) - (a.rating || 0));
@@ -374,13 +445,15 @@ export const storeService = {
   },
 
   async getProductBySlug(slug: string): Promise<Product | null> {
-    const p = await prisma.product.findUnique({ where: { slug }, include: { category: true } });
+    const p = await prisma.product.findUnique({ where: { slug }, include: productInclude });
     if (!p) return null;
-    return mapProduct(p, (await ratingsByProduct([p.id])).get(p.id));
+    const product = mapProduct(p, (await ratingsByProduct([p.id])).get(p.id));
+    if (product.hasVariants) product.variants = await this.getVariants(p.id, { activeOnly: true });
+    return product;
   },
 
   async getProductById(id: string): Promise<Product | null> {
-    const p = await prisma.product.findUnique({ where: { id }, include: { category: true } });
+    const p = await prisma.product.findUnique({ where: { id }, include: productInclude });
     if (!p) return null;
     return mapProduct(p, (await ratingsByProduct([p.id])).get(p.id));
   },
@@ -397,7 +470,7 @@ export const storeService = {
           images: JSON.stringify(data.images ?? []),
           categoryId: data.categoryId,
         },
-        include: { category: true },
+        include: productInclude,
       });
       return mapProduct(p);
     } catch (err) {
@@ -407,11 +480,16 @@ export const storeService = {
 
   async updateProduct(id: string, data: Partial<Product>): Promise<Product | null> {
     try {
+      const before = data.stock !== undefined ? await prisma.product.findUnique({ where: { id }, select: { stock: true } }) : null;
       const p = await prisma.product.update({
         where: { id },
         data: productData(data),
-        include: { category: true },
+        include: productInclude,
       });
+      // Back in stock (0 -> >0): email everyone who asked to be notified.
+      if (before && before.stock <= 0 && p.stock > 0) {
+        await notifyStockAvailable(p.id).catch((e) => console.error('notifyStockAvailable', e));
+      }
       return mapProduct(p, (await ratingsByProduct([p.id])).get(p.id));
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') return null;
@@ -432,6 +510,200 @@ export const storeService = {
       prisma.collectionProduct.deleteMany({ where: { productId: id } }),
       prisma.product.delete({ where: { id } }),
     ]);
+    return true;
+  },
+
+  // --- ATTRIBUTES (variant groups and values) ---
+  async getAttributeGroups(): Promise<AttributeGroup[]> {
+    const rows = await prisma.attributeGroup.findMany({
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+      include: { values: { orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }] } },
+    });
+    return rows.map(mapAttributeGroup);
+  },
+
+  async createAttributeGroup(data: { name: string; type: AttributeGroupType; sortOrder?: number }): Promise<AttributeGroup> {
+    const g = await prisma.attributeGroup.create({
+      data: { name: data.name, type: data.type, sortOrder: data.sortOrder ?? 0 },
+      include: { values: true },
+    });
+    return mapAttributeGroup(g);
+  },
+
+  async updateAttributeGroup(id: string, data: Partial<{ name: string; type: AttributeGroupType; sortOrder: number }>): Promise<AttributeGroup | null> {
+    try {
+      const g = await prisma.attributeGroup.update({
+        where: { id },
+        data: {
+          ...(data.name !== undefined && { name: data.name }),
+          ...(data.type !== undefined && { type: data.type }),
+          ...(data.sortOrder !== undefined && { sortOrder: data.sortOrder }),
+        },
+        include: { values: { orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }] } },
+      });
+      return mapAttributeGroup(g);
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') return null;
+      rethrow(err, 'un grupo de atributos');
+    }
+  },
+
+  async deleteAttributeGroup(id: string): Promise<boolean> {
+    const inUse = await prisma.productVariantValue.count({ where: { value: { groupId: id } } });
+    if (inUse > 0) {
+      throw new StoreError('No se puede eliminar: hay combinaciones de productos que usan este grupo.', 409);
+    }
+    try {
+      await prisma.attributeGroup.delete({ where: { id } });
+      return true;
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') return false;
+      throw err;
+    }
+  },
+
+  async createAttributeValue(
+    groupId: string,
+    data: { name: string; hex?: string | null; isMulticolor?: boolean; sortOrder?: number }
+  ): Promise<AttributeGroup['values'][number]> {
+    try {
+      const v = await prisma.attributeValue.create({
+        data: {
+          groupId,
+          name: data.name,
+          hex: str(data.hex),
+          isMulticolor: Boolean(data.isMulticolor),
+          sortOrder: data.sortOrder ?? 0,
+        },
+      });
+      return mapAttributeValue(v);
+    } catch (err) {
+      rethrow(err, 'un valor');
+    }
+  },
+
+  async updateAttributeValue(
+    id: string,
+    data: Partial<{ name: string; hex: string | null; isMulticolor: boolean; sortOrder: number }>
+  ): Promise<AttributeGroup['values'][number] | null> {
+    try {
+      const v = await prisma.attributeValue.update({
+        where: { id },
+        data: {
+          ...(data.name !== undefined && { name: data.name }),
+          ...(data.hex !== undefined && { hex: str(data.hex) }),
+          ...(data.isMulticolor !== undefined && { isMulticolor: Boolean(data.isMulticolor) }),
+          ...(data.sortOrder !== undefined && { sortOrder: data.sortOrder }),
+        },
+      });
+      return mapAttributeValue(v);
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') return null;
+      rethrow(err, 'un valor');
+    }
+  },
+
+  async deleteAttributeValue(id: string): Promise<boolean> {
+    const inUse = await prisma.productVariantValue.count({ where: { valueId: id } });
+    if (inUse > 0) throw new StoreError('No se puede eliminar: hay combinaciones de productos que usan este valor.', 409);
+    try {
+      await prisma.attributeValue.delete({ where: { id } });
+      return true;
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') return false;
+      throw err;
+    }
+  },
+
+  // --- PRODUCT VARIANTS ---
+  async getVariants(productId: string, opts?: { activeOnly?: boolean }): Promise<ProductVariant[]> {
+    const product = await prisma.product.findUnique({ where: { id: productId }, select: { price: true } });
+    if (!product) return [];
+    const rows = await prisma.productVariant.findMany({
+      where: { productId, ...(opts?.activeOnly ? { isActive: true } : {}) },
+      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+      include: variantInclude,
+    });
+    return rows.map((r) => mapVariant(r, num(product.price)));
+  },
+
+  /**
+   * Creates every combination of the chosen values (one list of value ids per attribute group).
+   * Combinations that already exist are skipped. New ones start with 0 stock and no price override.
+   */
+  async generateVariants(productId: string, valueIdsByGroup: string[][]): Promise<ProductVariant[]> {
+    const groups = valueIdsByGroup.filter((g) => g.length > 0);
+    if (groups.length === 0) throw new StoreError('Elige al menos un valor para generar combinaciones.', 400);
+    const all = groups.flat();
+    const found = await prisma.attributeValue.findMany({ where: { id: { in: all } }, select: { id: true, groupId: true } });
+    if (found.length !== new Set(all).size) throw new StoreError('Algún valor ya no existe.', 400);
+    const groupOf = new Map(found.map((v) => [v.id, v.groupId]));
+    const groupIds = groups.map((g) => new Set(g.map((id) => groupOf.get(id))));
+    if (groupIds.some((s) => s.size !== 1) || new Set(groupIds.map((s) => [...s][0])).size !== groups.length) {
+      throw new StoreError('Cada lista debe contener valores de un único grupo, sin repetir grupos.', 400);
+    }
+    if (groups.reduce((n, g) => n * g.length, 1) > 200) {
+      throw new StoreError('Demasiadas combinaciones (máximo 200 de una vez).', 400);
+    }
+
+    const combos = groups.reduce<string[][]>((acc, g) => acc.flatMap((c) => g.map((id) => [...c, id])), [[]]);
+    const product = await prisma.product.findUnique({ where: { id: productId }, select: { id: true } });
+    if (!product) throw new StoreError('Producto no encontrado.', 404);
+
+    await prisma.$transaction(async (tx) => {
+      const existing = await tx.productVariant.findMany({ where: { productId }, include: { values: true } });
+      const taken = new Set(existing.map((v) => variantKey(v.values.map((x) => x.valueId))));
+      let order = existing.length;
+      for (const combo of combos) {
+        if (taken.has(variantKey(combo))) continue;
+        await tx.productVariant.create({
+          data: { productId, sortOrder: order++, values: { create: combo.map((valueId) => ({ valueId })) } },
+        });
+      }
+      await syncProductStock(tx, productId);
+    });
+    return this.getVariants(productId);
+  },
+
+  async updateVariants(
+    productId: string,
+    updates: { id: string; price?: number | null; priceAdjustment?: number; stock?: number; sku?: string | null; image?: string | null; isActive?: boolean }[]
+  ): Promise<ProductVariant[]> {
+    const before = await prisma.product.findUnique({ where: { id: productId }, select: { stock: true } });
+    await prisma.$transaction(async (tx) => {
+      for (const u of updates) {
+        const res = await tx.productVariant.updateMany({
+          where: { id: u.id, productId },
+          data: {
+            ...(u.price !== undefined && { price: u.price }),
+            ...(u.priceAdjustment !== undefined && { priceAdjustment: u.priceAdjustment }),
+            ...(u.stock !== undefined && { stock: Math.max(0, Math.floor(u.stock)) }),
+            ...(u.sku !== undefined && { sku: str(u.sku) }),
+            ...(u.image !== undefined && { image: str(u.image) }),
+            ...(u.isActive !== undefined && { isActive: u.isActive }),
+          },
+        });
+        if (res.count === 0) throw new StoreError('Combinación no encontrada.', 404);
+      }
+      await syncProductStock(tx, productId);
+    });
+    // Back in stock through variant edits (product stock = sum of active variants): notify waiters.
+    if (before && before.stock <= 0) {
+      await notifyStockAvailable(productId).catch((e) => console.error('notifyStockAvailable', e));
+    }
+    return this.getVariants(productId);
+  },
+
+  /** Deletes a combination; if it appears in past orders it is only deactivated so the order history stays intact. */
+  async deleteVariant(productId: string, variantId: string): Promise<boolean> {
+    const v = await prisma.productVariant.findFirst({ where: { id: variantId, productId }, select: { id: true } });
+    if (!v) return false;
+    const inOrders = await prisma.orderItem.count({ where: { variantId } });
+    await prisma.$transaction(async (tx) => {
+      if (inOrders > 0) await tx.productVariant.update({ where: { id: variantId }, data: { isActive: false } });
+      else await tx.productVariant.delete({ where: { id: variantId } });
+      await syncProductStock(tx, productId);
+    });
     return true;
   },
 
@@ -473,20 +745,50 @@ export const storeService = {
     return { items: rows.map(mapOrder), total, page, pageSize };
   },
 
-  /** Server-side price quote for a cart (prices/shipping from DB) and stock validation. */
-  async quoteCart(
-    items: { productId: string; quantity: number }[]
-  ): Promise<{ subtotal: number; shippingCost: number; totalAmount: number }> {
-    const ids = [...new Set(items.map((i) => i.productId))];
-    const products = await prisma.product.findMany({ where: { id: { in: ids }, isActive: true } });
+  /**
+   * Resolves cart lines against the database: product (or chosen variant), unit price and stock check.
+   * Products with active variants require a variantId; products without variants ignore it.
+   */
+  async resolveCartLines(items: { productId: string; variantId?: string | null; quantity: number }[]) {
+    const productIds = [...new Set(items.map((i) => i.productId))];
+    const products = await prisma.product.findMany({
+      where: { id: { in: productIds }, isActive: true },
+      include: { _count: { select: { variants: { where: { isActive: true } } } } },
+    });
     const byId = new Map(products.map((p) => [p.id, p]));
-    for (const item of items) {
+    const variantIds = [...new Set(items.map((i) => i.variantId).filter((v): v is string => !!v))];
+    const variantRows = variantIds.length
+      ? await prisma.productVariant.findMany({
+          where: { id: { in: variantIds }, isActive: true },
+          include: variantInclude,
+        })
+      : [];
+    const variantById = new Map(variantRows.map((v) => [v.id, v]));
+
+    return items.map((item) => {
       const p = byId.get(item.productId);
       if (!p) throw new StoreError('Uno de los productos ya no está disponible.', 409);
+      if (p._count.variants > 0) {
+        const v = item.variantId ? variantById.get(item.variantId) : undefined;
+        if (!v || v.productId !== p.id) {
+          throw new StoreError(`Elige una opción válida para "${p.name}".`, 409);
+        }
+        const mapped = mapVariant(v, num(p.price));
+        if (v.stock < item.quantity) throw new StoreError(`Stock insuficiente para "${p.name}" (${mapped.label}).`, 409);
+        return { item, product: p, variant: v, unitPrice: mapped.price, label: mapped.label as string | null, image: v.image };
+      }
       if (p.stock < item.quantity) throw new StoreError(`Stock insuficiente para "${p.name}".`, 409);
-    }
+      return { item, product: p, variant: null, unitPrice: num(p.price), label: null as string | null, image: null as string | null };
+    });
+  },
+
+  /** Server-side price quote for a cart (prices/shipping from DB) and stock validation. */
+  async quoteCart(
+    items: { productId: string; variantId?: string | null; quantity: number }[]
+  ): Promise<{ subtotal: number; shippingCost: number; totalAmount: number }> {
+    const lines = await this.resolveCartLines(items);
     const settings = await this.getSettings();
-    const subtotal = Math.round(items.reduce((sum, i) => sum + num(byId.get(i.productId)!.price) * i.quantity, 0) * 100) / 100;
+    const subtotal = Math.round(lines.reduce((sum, l) => sum + l.unitPrice * l.item.quantity, 0) * 100) / 100;
     const shippingCost = subtotal >= settings.freeShippingThreshold ? 0 : settings.standardShippingCost;
     return { subtotal, shippingCost, totalAmount: Math.round((subtotal + shippingCost) * 100) / 100 };
   },
@@ -509,18 +811,10 @@ export const storeService = {
    * and stock is decremented atomically in the same transaction.
    */
   async createOrder(data: Omit<Order, 'id' | 'orderNumber' | 'createdAt'>): Promise<Order> {
-    const productIds = [...new Set(data.items.map((i) => i.productId))];
-    const products = await prisma.product.findMany({ where: { id: { in: productIds }, isActive: true } });
-    const byId = new Map(products.map((p) => [p.id, p]));
-
-    for (const item of data.items) {
-      const p = byId.get(item.productId);
-      if (!p) throw new StoreError('Uno de los productos ya no está disponible.', 409);
-      if (p.stock < item.quantity) throw new StoreError(`Stock insuficiente para "${p.name}".`, 409);
-    }
+    const lines = await this.resolveCartLines(data.items);
 
     const settings = await this.getSettings();
-    const subtotal = data.items.reduce((sum, i) => sum + num(byId.get(i.productId)!.price) * i.quantity, 0);
+    const subtotal = lines.reduce((sum, l) => sum + l.unitPrice * l.item.quantity, 0);
 
     let discountAmount = 0;
     let couponCode: string | null = null;
@@ -539,12 +833,21 @@ export const storeService = {
 
     try {
       const created = await prisma.$transaction(async (tx) => {
-        for (const item of data.items) {
-          const res = await tx.product.updateMany({
-            where: { id: item.productId, stock: { gte: item.quantity } },
-            data: { stock: { decrement: item.quantity } },
-          });
-          if (res.count === 0) throw new StoreError('Stock insuficiente, inténtalo de nuevo.', 409);
+        for (const l of lines) {
+          if (l.variant) {
+            const res = await tx.productVariant.updateMany({
+              where: { id: l.variant.id, stock: { gte: l.item.quantity } },
+              data: { stock: { decrement: l.item.quantity } },
+            });
+            if (res.count === 0) throw new StoreError('Stock insuficiente, inténtalo de nuevo.', 409);
+            await syncProductStock(tx, l.product.id);
+          } else {
+            const res = await tx.product.updateMany({
+              where: { id: l.product.id, stock: { gte: l.item.quantity } },
+              data: { stock: { decrement: l.item.quantity } },
+            });
+            if (res.count === 0) throw new StoreError('Stock insuficiente, inténtalo de nuevo.', 409);
+          }
         }
 
         if (couponCode) {
@@ -576,21 +879,21 @@ export const storeService = {
             trackingNumber: data.trackingNumber ?? null,
             notes: data.notes ?? null,
             items: {
-              create: data.items.map((i) => {
-                const p = byId.get(i.productId)!;
-                return {
-                  productId: p.id,
-                  productName: p.name,
-                  productImage: parseImages(p.images)[0] ?? null,
-                  unitPrice: p.price,
-                  quantity: i.quantity,
-                };
-              }),
+              create: lines.map((l) => ({
+                productId: l.product.id,
+                productName: l.product.name,
+                productImage: l.image || parseImages(l.product.images)[0] || null,
+                unitPrice: l.unitPrice,
+                quantity: l.item.quantity,
+                variantId: l.variant?.id ?? null,
+                variantLabel: l.label,
+              })),
             },
           },
           include: { items: true },
         });
       });
+      await markCartOrdered(data.customerEmail);
       return mapOrder(created);
     } catch (err) {
       if (err instanceof StoreError) throw err;
@@ -609,18 +912,24 @@ export const storeService = {
     }
 
     const restock = status === 'CANCELLED' && existing.status !== 'CANCELLED';
-    const [o] = await prisma.$transaction([
-      prisma.order.update({
+    const o = await prisma.$transaction(async (tx) => {
+      const updated = await tx.order.update({
         where: { id: existing.id },
         data: { status, ...(trackingNumber ? { trackingNumber } : {}) },
         include: { items: true },
-      }),
-      ...(restock
-        ? existing.items.map((i) =>
-            prisma.product.update({ where: { id: i.productId }, data: { stock: { increment: i.quantity } } })
-          )
-        : []),
-    ]);
+      });
+      if (restock) {
+        for (const i of existing.items) {
+          if (i.variantId) {
+            await tx.productVariant.update({ where: { id: i.variantId }, data: { stock: { increment: i.quantity } } });
+            await syncProductStock(tx, i.productId);
+          } else {
+            await tx.product.update({ where: { id: i.productId }, data: { stock: { increment: i.quantity } } });
+          }
+        }
+      }
+      return updated;
+    });
     return mapOrder(o);
   },
 
@@ -723,9 +1032,20 @@ export const storeService = {
   async getCollections(opts?: { admin?: boolean }): Promise<Collection[]> {
     const rows = await prisma.collection.findMany({
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
-      include: { products: { select: { productId: true }, orderBy: { sortOrder: 'asc' } } },
+      include: {
+        products: {
+          select: { productId: true, product: { select: { images: true, isActive: true } } },
+          orderBy: { sortOrder: 'asc' },
+        },
+      },
     });
-    const list = rows.map((r) => mapCollection(r));
+    const list = rows.map((r) => {
+      const firstImage = r.products
+        .filter((cp) => cp.product.isActive)
+        .map((cp) => parseImages(cp.product.images)[0])
+        .find(Boolean);
+      return { ...mapCollection(r), coverImage: r.heroImage || firstImage || null };
+    });
     return opts?.admin ? list : list.filter((c) => c.status === 'live' || c.status === 'scheduled');
   },
 
@@ -744,7 +1064,7 @@ export const storeService = {
       include: {
         products: {
           orderBy: { sortOrder: 'asc' },
-          include: { product: { include: { category: true } } },
+          include: { product: { include: productInclude } },
         },
       },
     });

@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { X, Trash2, Plus, Minus, ArrowRight, ShoppingBag, Sparkles, ShieldCheck } from 'lucide-react';
-import { useCart } from '@/lib/cartContext';
+import { useCart, cartLineKey, cartUnitPrice } from '@/lib/cartContext';
 import { formatPrice } from '@/lib/utils';
 
 export function CartDrawer() {
@@ -94,10 +94,10 @@ export function CartDrawer() {
               </div>
             ) : (
               cart.map((item) => {
-                const img = item.product.images[0] || 'https://images.unsplash.com/photo-1630019852942-f89202989a59?w=800&auto=format&fit=crop&q=80';
+                const img = item.variant?.image || item.product.images[0] || 'https://images.unsplash.com/photo-1630019852942-f89202989a59?w=800&auto=format&fit=crop&q=80';
                 return (
                   <div
-                    key={item.product.id}
+                    key={cartLineKey(item)}
                     className="flex space-x-4 p-3 rounded-2xl border border-boho-sand-200 bg-white hover:border-boho-sand-300 hover:shadow-soft transition-all duration-200"
                   >
                     <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-boho-sand-100 shrink-0">
@@ -121,15 +121,18 @@ export function CartDrawer() {
                             {item.product.name}
                           </Link>
                           <button
-                            onClick={() => removeFromCart(item.product.id)}
+                            onClick={() => removeFromCart(cartLineKey(item))}
                             className="text-boho-charcoal-muted hover:text-red-600 active:scale-90 p-1 transition-all"
                             aria-label="Eliminar producto"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
+                        {item.variant && (
+                          <p className="text-[11px] font-medium text-boho-terracotta mt-0.5 line-clamp-1">{item.variant.label}</p>
+                        )}
                         <p className="text-xs text-boho-charcoal-muted font-sans mt-0.5">
-                          {formatPrice(item.product.price)} / ud.
+                          {formatPrice(cartUnitPrice(item))} / ud.
                         </p>
                       </div>
 
@@ -137,7 +140,7 @@ export function CartDrawer() {
                         {/* Quantity selector */}
                         <div className="flex items-center border border-boho-sand-300 rounded-full bg-boho-sand-50/70 px-1.5 py-0.5 shadow-sm">
                           <button
-                            onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                            onClick={() => updateQuantity(cartLineKey(item), item.quantity - 1)}
                             className="p-1 text-boho-charcoal-muted hover:text-boho-charcoal active:scale-90 transition-all"
                             aria-label="Restar una unidad"
                           >
@@ -147,7 +150,7 @@ export function CartDrawer() {
                             {item.quantity}
                           </span>
                           <button
-                            onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                            onClick={() => updateQuantity(cartLineKey(item), item.quantity + 1)}
                             className="p-1 text-boho-charcoal-muted hover:text-boho-charcoal active:scale-90 transition-all"
                             aria-label="Añadir una unidad"
                           >
@@ -156,7 +159,7 @@ export function CartDrawer() {
                         </div>
 
                         <span className="font-bold text-sm text-boho-charcoal">
-                          {formatPrice(item.product.price * item.quantity)}
+                          {formatPrice(cartUnitPrice(item) * item.quantity)}
                         </span>
                       </div>
                     </div>

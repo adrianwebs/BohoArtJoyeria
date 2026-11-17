@@ -56,6 +56,8 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/api/auth') ||
     pathname.startsWith('/api/settings') ||
     pathname.startsWith('/api/my-ip') ||
+    pathname.startsWith('/api/payments/redsys') || // webhook de Redsys: debe llegar aunque haya mantenimiento
+    pathname.startsWith('/api/cron') ||
     pathname.startsWith('/admin') ||
     pathname.startsWith('/login') ||
     pathname === '/logo.png' ||

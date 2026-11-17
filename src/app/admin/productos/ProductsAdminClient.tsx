@@ -14,18 +14,21 @@ import {
   SlidersHorizontal,
   Package,
 } from 'lucide-react';
-import { Product, Category } from '@/lib/types';
+import { Product, Category, AttributeGroup, ProductVariant } from '@/lib/types';
 import { formatPrice } from '@/lib/utils';
 import { ImageUploader } from '@/components/admin/ImageUploader';
+import { ProductVariantsEditor } from './ProductVariantsEditor';
 
 interface ProductsAdminClientProps {
   initialProducts: Product[];
   categories: Category[];
+  attributeGroups: AttributeGroup[];
 }
 
 export function ProductsAdminClient({
   initialProducts,
   categories,
+  attributeGroups,
 }: ProductsAdminClientProps) {
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [search, setSearch] = useState('');
@@ -99,7 +102,8 @@ export function ProductsAdminClient({
         slug: slug || undefined,
         price: parseFloat(price),
         comparePrice: comparePrice ? parseFloat(comparePrice) : null,
-        stock: parseInt(stock, 10) || 0,
+        // With variants the stock lives in each combination (Product.stock is their sum).
+        ...(editingProduct?.hasVariants ? {} : { stock: parseInt(stock, 10) || 0 }),
         categoryId,
         description,
         shortDescription,
@@ -139,6 +143,18 @@ export function ProductsAdminClient({
     } finally {
       setSaving(false);
     }
+  };
+
+  /** Keeps the list (and the open form) in sync with the stock/flags derived from the combinations. */
+  const handleVariantsChanged = (variants: ProductVariant[]) => {
+    if (!editingProduct) return;
+    const active = variants.filter((v) => v.isActive);
+    const hasVariants = active.length > 0;
+    const totalStock = active.reduce((sum, v) => sum + v.stock, 0);
+    const patch = hasVariants ? { hasVariants, stock: totalStock } : { hasVariants };
+    setEditingProduct({ ...editingProduct, ...patch });
+    if (hasVariants) setStock(String(totalStock));
+    setProducts((prev) => prev.map((p) => (p.id === editingProduct.id ? { ...p, ...patch } : p)));
   };
 
   const handleDeleteProduct = async (id: string) => {
@@ -406,8 +422,10 @@ export function ProductsAdminClient({
                     required
                     value={stock}
                     onChange={(e) => setStock(e.target.value)}
+                    disabled={Boolean(editingProduct?.hasVariants)}
+                    title={editingProduct?.hasVariants ? 'El stock se gestiona en las combinaciones' : undefined}
                     placeholder="10"
-                    className="w-full px-3.5 py-2 text-xs bg-boho-sand-50 border border-boho-sand-300 rounded-xl focus:outline-none focus:border-boho-terracotta"
+                    className="w-full px-3.5 py-2 text-xs bg-boho-sand-50 border border-boho-sand-300 rounded-xl focus:outline-none focus:border-boho-terracotta disabled:opacity-50"
                   />
                 </div>
               </div>
@@ -459,6 +477,21 @@ export function ProductsAdminClient({
                   className="w-full px-3.5 py-2 text-xs bg-boho-sand-50 border border-boho-sand-300 rounded-xl focus:outline-none focus:border-boho-terracotta"
                 />
               </div>
+
+              {/* Variants (only for saved products, since combinations need the product id) */}
+              {editingProduct ? (
+                <ProductVariantsEditor
+                  productId={editingProduct.id}
+                  productPrice={parseFloat(price) || editingProduct.price}
+                  productImages={images}
+                  attributeGroups={attributeGroups}
+                  onChanged={handleVariantsChanged}
+                />
+              ) : (
+                <p className="text-[11px] text-boho-charcoal-muted bg-boho-sand-50 border border-boho-sand-200 rounded-xl px-3.5 py-2">
+                  Guarda la joya y vuelve a editarla para añadir combinaciones (modelo, color, talla…).
+                </p>
+              )}
 
               {/* Switches */}
               <div className="flex items-center space-x-6 pt-2">
