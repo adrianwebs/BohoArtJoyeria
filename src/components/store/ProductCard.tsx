@@ -99,6 +99,15 @@ export function ProductCard({ product }: ProductCardProps) {
 
         {/* Quick Add Button Hover overlay */}
         <div className="absolute bottom-3 inset-x-3 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-3 group-hover:translate-y-0 z-10">
+          {product.hasVariants ? (
+            <Link
+              href={`/productos/${product.slug}`}
+              className="w-full py-2.5 px-3 rounded-full text-xs font-semibold shadow-md flex items-center justify-center space-x-1.5 bg-white/95 backdrop-blur-sm text-boho-charcoal hover:bg-boho-terracotta hover:text-white transition-all duration-200"
+            >
+              <ShoppingBag className="w-3.5 h-3.5" />
+              <span>Elegir opciones</span>
+            </Link>
+          ) : (
           <button
             onClick={handleQuickAdd}
             disabled={product.stock <= 0}
@@ -120,6 +129,7 @@ export function ProductCard({ product }: ProductCardProps) {
               </>
             )}
           </button>
+          )}
         </div>
       </div>
 

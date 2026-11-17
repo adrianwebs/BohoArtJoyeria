@@ -2,7 +2,7 @@ import type { Order } from './types';
 
 export interface ParsedOrderInput {
   data: Omit<Order, 'id' | 'orderNumber' | 'createdAt' | 'status' | 'paymentMethod' | 'paypalOrderId' | 'items' | 'subtotal' | 'shippingCost' | 'totalAmount' | 'trackingNumber'>;
-  items: { productId: string; quantity: number }[];
+  items: { productId: string; variantId?: string | null; quantity: number }[];
 }
 
 const clean = (v: unknown, max = 300) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
@@ -19,12 +19,15 @@ export function parseOrderInput(body: any): ParsedOrderInput | string {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) return 'Email no válido';
   if (!Array.isArray(body?.items) || body.items.length === 0 || body.items.length > 50) return 'La cesta está vacía';
 
-  const merged = new Map<string, number>();
+  const merged = new Map<string, { productId: string; variantId: string | null; quantity: number }>();
   for (const i of body.items) {
     const productId = clean(i?.productId, 64);
+    const variantId = clean(i?.variantId, 64) || null;
     const quantity = Math.floor(Number(i?.quantity));
     if (!productId || !Number.isFinite(quantity) || quantity < 1 || quantity > 99) return 'Línea de pedido no válida';
-    merged.set(productId, (merged.get(productId) ?? 0) + quantity);
+    const key = `${productId}|${variantId ?? ''}`;
+    const prev = merged.get(key);
+    merged.set(key, { productId, variantId, quantity: (prev?.quantity ?? 0) + quantity });
   }
 
   const couponCode = clean(body?.couponCode, 50).toUpperCase() || null;
@@ -43,7 +46,7 @@ export function parseOrderInput(body: any): ParsedOrderInput | string {
       couponCode,
       discountAmount: 0,
     },
-    items: [...merged].map(([productId, quantity]) => ({ productId, quantity })),
+    items: [...merged.values()],
   };
 }
 
@@ -68,6 +71,7 @@ export function toCreateOrder(
       id: '',
       orderId: '',
       productId: i.productId,
+      variantId: i.variantId ?? null,
       productName: '',
       unitPrice: 0,
       quantity: i.quantity,

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ShoppingBag, ArrowRight, Trash2, Plus, Minus, ArrowLeft, ShieldCheck, Sparkles, Tag, X, CheckCircle2, AlertCircle } from 'lucide-react';
-import { useCart } from '@/lib/cartContext';
+import { useCart, cartLineKey, cartUnitPrice } from '@/lib/cartContext';
 import { formatPrice } from '@/lib/utils';
 
 export default function CartPage() {
@@ -92,10 +92,10 @@ export default function CartPage() {
           <div className="lg:col-span-8 space-y-4">
             <div className="bg-white rounded-3xl p-6 border border-boho-sand-200 shadow-soft divide-y divide-boho-sand-200">
               {cart.map((item) => {
-                const img = item.product.images[0] || 'https://images.unsplash.com/photo-1630019852942-f89202989a59?w=800&auto=format&fit=crop&q=80';
+                const img = item.variant?.image || item.product.images[0] || 'https://images.unsplash.com/photo-1630019852942-f89202989a59?w=800&auto=format&fit=crop&q=80';
                 return (
                   <div
-                    key={item.product.id}
+                    key={cartLineKey(item)}
                     className="py-5 first:pt-0 last:pb-0 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
                   >
                     <div className="flex items-center space-x-4">
@@ -119,8 +119,11 @@ export default function CartPage() {
                         >
                           {item.product.name}
                         </Link>
+                        {item.variant && (
+                          <p className="text-[11px] font-medium text-boho-terracotta mt-0.5">{item.variant.label}</p>
+                        )}
                         <p className="text-xs text-boho-charcoal-muted font-sans mt-0.5">
-                          Precio unidad: {formatPrice(item.product.price)}
+                          Precio unidad: {formatPrice(cartUnitPrice(item))}
                         </p>
                       </div>
                     </div>
@@ -129,7 +132,7 @@ export default function CartPage() {
                       {/* Quantity selector */}
                       <div className="flex items-center border border-boho-sand-300 rounded-full bg-boho-sand-50/70 px-2 py-1">
                         <button
-                          onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                          onClick={() => updateQuantity(cartLineKey(item), item.quantity - 1)}
                           className="p-1 text-boho-charcoal-muted hover:text-boho-charcoal transition-colors"
                           aria-label="Restar unidad"
                         >
@@ -139,7 +142,7 @@ export default function CartPage() {
                           {item.quantity}
                         </span>
                         <button
-                          onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                          onClick={() => updateQuantity(cartLineKey(item), item.quantity + 1)}
                           className="p-1 text-boho-charcoal-muted hover:text-boho-charcoal transition-colors"
                           aria-label="Sumar unidad"
                         >
@@ -150,13 +153,13 @@ export default function CartPage() {
                       {/* Total Line Price */}
                       <div className="text-right min-w-[80px]">
                         <span className="font-bold text-base text-boho-charcoal">
-                          {formatPrice(item.product.price * item.quantity)}
+                          {formatPrice(cartUnitPrice(item) * item.quantity)}
                         </span>
                       </div>
 
                       {/* Remove Button */}
                       <button
-                        onClick={() => removeFromCart(item.product.id)}
+                        onClick={() => removeFromCart(cartLineKey(item))}
                         className="p-2 text-boho-charcoal-muted hover:text-red-600 transition-colors"
                         title="Eliminar de la cesta"
                       >

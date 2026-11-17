@@ -50,7 +50,7 @@ function itemsTable(order: Order): string {
   const rows = order.items
     .map(
       (i) =>
-        `<tr><td style="padding:4px 0">${esc(i.productName)} × ${i.quantity}</td><td style="text-align:right">${formatPrice(i.unitPrice * i.quantity)}</td></tr>`
+        `<tr><td style="padding:4px 0">${esc(i.productName)}${i.variantLabel ? ` <span style="color:#8a7f79;font-size:12px">(${esc(i.variantLabel)})</span>` : ''} × ${i.quantity}</td><td style="text-align:right">${formatPrice(i.unitPrice * i.quantity)}</td></tr>`
     )
     .join('');
   return `<table style="width:100%;font-size:14px;border-collapse:collapse">${rows}

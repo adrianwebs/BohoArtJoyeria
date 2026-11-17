@@ -1,7 +1,15 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { CartItem, Product, DiscountType } from './types';
+import { CartItem, CartVariant, Product, DiscountType } from './types';
+
+/** Unique key of a cart line: the same product with different variants are separate lines. */
+export const cartLineKey = (item: Pick<CartItem, 'product' | 'variant'>) =>
+  `${item.product.id}:${item.variant?.id ?? ''}`;
+
+/** Unit price of a cart line (the chosen variant's price, or the product price). */
+export const cartUnitPrice = (item: Pick<CartItem, 'product' | 'variant'>) =>
+  item.variant ? item.variant.price : item.product.price;
 
 export interface AppliedCouponState {
   code: string;
@@ -15,9 +23,9 @@ interface CartContextType {
   isOpen: boolean;
   openCart: () => void;
   closeCart: () => void;
-  addToCart: (product: Product, quantity?: number) => void;
-  removeFromCart: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
+  addToCart: (product: Product, quantity?: number, variant?: CartVariant | null) => void;
+  removeFromCart: (lineKey: string) => void;
+  updateQuantity: (lineKey: string, quantity: number) => void;
   clearCart: () => void;
   totalItems: number;
   subtotal: number;
@@ -74,34 +82,31 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const openCart = () => setIsOpen(true);
   const closeCart = () => setIsOpen(false);
 
-  const addToCart = (product: Product, quantity: number = 1) => {
+  const addToCart = (product: Product, quantity: number = 1, variant: CartVariant | null = null) => {
+    const key = cartLineKey({ product, variant });
     setCart((prev) => {
-      const existing = prev.find((item) => item.product.id === product.id);
+      const existing = prev.find((item) => cartLineKey(item) === key);
       if (existing) {
         return prev.map((item) =>
-          item.product.id === product.id
-            ? { ...item, quantity: item.quantity + quantity }
-            : item
+          cartLineKey(item) === key ? { ...item, quantity: item.quantity + quantity } : item
         );
       }
-      return [...prev, { product, quantity }];
+      return [...prev, { product, variant, quantity }];
     });
     setIsOpen(true);
   };
 
-  const removeFromCart = (productId: string) => {
-    setCart((prev) => prev.filter((item) => item.product.id !== productId));
+  const removeFromCart = (lineKey: string) => {
+    setCart((prev) => prev.filter((item) => cartLineKey(item) !== lineKey));
   };
 
-  const updateQuantity = (productId: string, quantity: number) => {
+  const updateQuantity = (lineKey: string, quantity: number) => {
     if (quantity <= 0) {
-      removeFromCart(productId);
+      removeFromCart(lineKey);
       return;
     }
     setCart((prev) =>
-      prev.map((item) =>
-        item.product.id === productId ? { ...item, quantity } : item
-      )
+      prev.map((item) => (cartLineKey(item) === lineKey ? { ...item, quantity } : item))
     );
   };
 
@@ -111,7 +116,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
 
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const subtotal = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+  const subtotal = cart.reduce((sum, item) => sum + cartUnitPrice(item) * item.quantity, 0);
 
   // Recalculate discount based on current subtotal
   let discountAmount = 0;

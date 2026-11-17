@@ -380,6 +380,9 @@ export default function AdminOrdersPage() {
                       </div>
                       <div>
                         <div className="font-semibold text-boho-charcoal">{item.productName}</div>
+                        {item.variantLabel && (
+                          <div className="text-[11px] font-medium text-boho-terracotta">{item.variantLabel}</div>
+                        )}
                         <span className="text-boho-charcoal-muted">
                           {item.quantity} ud(s) x {formatPrice(item.unitPrice)}
                         </span>
