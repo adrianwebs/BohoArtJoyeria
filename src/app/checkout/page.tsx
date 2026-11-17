@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { ShieldCheck, Truck, ArrowLeft, Lock, Sparkles, CheckCircle2, Tag, X, AlertCircle } from 'lucide-react';
 import { useCart, cartLineKey, cartUnitPrice } from '@/lib/cartContext';
 import { formatPrice } from '@/lib/utils';
+import { useCartTracking } from '@/lib/useCartTracking';
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -14,6 +15,7 @@ export default function CheckoutPage() {
 
   const [customerName, setCustomerName] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
+  useCartTracking(customerEmail, cart);
   const [customerPhone, setCustomerPhone] = useState('');
   const [shippingAddress, setShippingAddress] = useState('');
   const [city, setCity] = useState('');
