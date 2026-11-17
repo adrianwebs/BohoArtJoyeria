@@ -21,7 +21,7 @@ function getTransporter(): Transporter | null {
   return transporter;
 }
 
-const esc = (v: unknown) =>
+export const esc = (v: unknown) =>
   String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 
 /** Sends an email; never throws (a mail failure must not break an order). No-op when SMTP is not configured. */
@@ -40,7 +40,7 @@ export async function sendMail(to: string | undefined | null, subject: string, h
   }
 }
 
-function layout(title: string, body: string): string {
+export function layout(title: string, body: string): string {
   return `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#3a3330;padding:24px">
   <h2 style="color:#b8583f;margin:0 0 12px">${esc(title)}</h2>${body}
   <p style="font-size:12px;color:#8a7f79;margin-top:28px">Bohoart Jewelry · Joyería artesanal hecha a mano</p></div>`;

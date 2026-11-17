@@ -43,7 +43,7 @@ async function accessToken(): Promise<string> {
   return (await res.json()).access_token;
 }
 
-export async function createPaypalOrder(total: number, reference: string): Promise<string> {
+export async function createPaypalOrder(total: number, reference: string, description = 'Pedido Bohoart Jewelry'): Promise<string> {
   const token = await accessToken();
   const res = await fetch(`${config().base}/v2/checkout/orders`, {
     method: 'POST',
@@ -53,7 +53,7 @@ export async function createPaypalOrder(total: number, reference: string): Promi
       purchase_units: [
         {
           reference_id: reference,
-          description: 'Pedido Bohoart Jewelry',
+          description: description.slice(0, 120),
           amount: { currency_code: 'EUR', value: total.toFixed(2) },
         },
       ],

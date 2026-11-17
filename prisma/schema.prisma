@@ -176,3 +176,110 @@ model Coupon {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 }
+
+// ───────────────────────── Talleres (workshops) ─────────────────────────
+
+model Workshop {
+  id               String            @id @default(uuid())
+  title            String
+  slug             String            @unique
+  shortDescription String?
+  description      String            @db.NVarChar(Max)
+  price            Decimal           @db.Decimal(10, 2) // precio total por plaza
+  depositType      String            @default("FIXED") // "FIXED" (importe por plaza) | "PERCENT" (% del precio)
+  depositValue     Decimal           @default(20.00) @db.Decimal(10, 2) // señal: no reembolsable
+  durationMinutes  Int               @default(120)
+  materials        String?           @db.NVarChar(Max) // materiales incluidos (una línea por elemento)
+  faq              String?           @db.NVarChar(Max) // JSON: [{ "q": "...", "a": "..." }]
+  image            String?           @db.NVarChar(Max)
+  isActive         Boolean           @default(true)
+  sortOrder        Int               @default(0)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  sessions         WorkshopSession[]
+  reviews          WorkshopReview[]
+  photos           WorkshopPhoto[]
+  inquiries        WorkshopInquiry[]
+}
+
+model WorkshopSession {
+  id         String            @id @default(uuid())
+  workshopId String
+  workshop   Workshop          @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  startsAt   DateTime
+  capacity   Int               @default(6)
+  seatsTaken Int               @default(0) // plazas con reserva PAID/ATTENDED (se actualiza de forma atómica)
+  isActive   Boolean           @default(true)
+  createdAt  DateTime          @default(now())
+  bookings   WorkshopBooking[]
+
+  @@index([workshopId, startsAt])
+}
+
+model WorkshopBooking {
+  id            String          @id @default(uuid())
+  reference     String          @unique
+  sessionId     String
+  session       WorkshopSession @relation(fields: [sessionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  customerName  String
+  customerEmail String
+  customerPhone String
+  seats         Int             @default(1)
+  totalAmount   Decimal         @db.Decimal(10, 2) // precio total del taller para las plazas reservadas
+  depositAmount Decimal         @db.Decimal(10, 2) // señal a pagar online (no reembolsable)
+  amountPaid    Decimal         @default(0.00) @db.Decimal(10, 2)
+  paymentMethod String? // "PAYPAL" | "REDSYS"
+  paymentRef    String? // id de pedido PayPal o nº de pedido Redsys
+  status        String          @default("PENDING") // "PENDING" | "PAID" | "CANCELLED" | "ATTENDED"
+  notes         String?         @db.NVarChar(Max)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([sessionId, status])
+  @@index([paymentRef])
+}
+
+model WorkshopReview {
+  id          String   @id @default(uuid())
+  workshopId  String
+  workshop    Workshop @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  authorName  String
+  authorEmail String
+  rating      Int      @default(5)
+  comment     String   @db.NVarChar(Max)
+  isApproved  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model WorkshopPhoto {
+  id         String   @id @default(uuid())
+  workshopId String
+  workshop   Workshop @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  url        String   @db.NVarChar(Max)
+  caption    String?
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+}
+
+// Consulta de "pedir otra fecha u horario" / contacto fuera de horario.
+model WorkshopInquiry {
+  id            String    @id @default(uuid())
+  workshopId    String?
+  workshop      Workshop? @relation(fields: [workshopId], references: [id], onDelete: SetNull)
+  name          String
+  email         String
+  phone         String?
+  preferredDate String?
+  message       String    @db.NVarChar(Max)
+  status        String    @default("NEW") // "NEW" | "ANSWERED" | "ARCHIVED"
+  createdAt     DateTime  @default(now())
+}
+
+// Información de la sala donde se dan los talleres (una sola fila, id = "main"). Sección informativa, no reservable.
+model WorkshopRoomInfo {
+  id        String   @id @default("main")
+  title     String   @default("Nuestra sala de talleres")
+  text      String   @default("") @db.NVarChar(Max)
+  photos    String   @default("[]") @db.NVarChar(Max) // JSON: string[] de URLs
+  updatedAt DateTime @updatedAt
+}
