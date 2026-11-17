@@ -669,6 +669,7 @@ export const storeService = {
     productId: string,
     updates: { id: string; price?: number | null; priceAdjustment?: number; stock?: number; sku?: string | null; image?: string | null; isActive?: boolean }[]
   ): Promise<ProductVariant[]> {
+    const before = await prisma.product.findUnique({ where: { id: productId }, select: { stock: true } });
     await prisma.$transaction(async (tx) => {
       for (const u of updates) {
         const res = await tx.productVariant.updateMany({
@@ -686,6 +687,10 @@ export const storeService = {
       }
       await syncProductStock(tx, productId);
     });
+    // Back in stock through variant edits (product stock = sum of active variants): notify waiters.
+    if (before && before.stock <= 0) {
+      await notifyStockAvailable(productId).catch((e) => console.error('notifyStockAvailable', e));
+    }
     return this.getVariants(productId);
   },
 
