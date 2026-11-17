@@ -723,9 +723,20 @@ export const storeService = {
   async getCollections(opts?: { admin?: boolean }): Promise<Collection[]> {
     const rows = await prisma.collection.findMany({
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
-      include: { products: { select: { productId: true }, orderBy: { sortOrder: 'asc' } } },
+      include: {
+        products: {
+          select: { productId: true, product: { select: { images: true, isActive: true } } },
+          orderBy: { sortOrder: 'asc' },
+        },
+      },
     });
-    const list = rows.map((r) => mapCollection(r));
+    const list = rows.map((r) => {
+      const firstImage = r.products
+        .filter((cp) => cp.product.isActive)
+        .map((cp) => parseImages(cp.product.images)[0])
+        .find(Boolean);
+      return { ...mapCollection(r), coverImage: r.heroImage || firstImage || null };
+    });
     return opts?.admin ? list : list.filter((c) => c.status === 'live' || c.status === 'scheduled');
   },
 

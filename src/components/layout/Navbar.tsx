@@ -13,20 +13,79 @@ interface NavbarProps {
   collections?: { name: string; slug: string }[];
 }
 
+const NAV_LINK =
+  'relative py-1 text-sm font-medium text-boho-charcoal hover:text-boho-terracotta transition-colors after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-0 hover:after:w-full after:bg-boho-terracotta after:transition-all after:duration-300';
+
+interface NavDropdownProps {
+  label: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  allHref: string;
+  allLabel: string;
+  items: { key: string; href: string; label: string }[];
+  icon?: boolean;
+}
+
+function NavDropdown({ label, open, onOpenChange, allHref, allLabel, items, icon }: NavDropdownProps) {
+  return (
+    <div className="relative" onMouseEnter={() => onOpenChange(true)} onMouseLeave={() => onOpenChange(false)}>
+      <button
+        type="button"
+        onClick={() => onOpenChange(!open)}
+        className="inline-flex items-center space-x-1 py-1 text-sm font-medium text-boho-charcoal hover:text-boho-terracotta transition-colors"
+        aria-expanded={open}
+        aria-haspopup="true"
+      >
+        <span>{label}</span>
+        <ChevronDown
+          className={`w-3.5 h-3.5 transition-transform duration-200 ${open ? 'rotate-180 text-boho-terracotta' : 'text-boho-charcoal-muted'}`}
+        />
+      </button>
+
+      {open && (
+        <div className="absolute top-full left-0 mt-1 w-60 bg-white rounded-xl shadow-xl border border-boho-sand-300/80 py-2 z-50 animate-slide-down">
+          <Link
+            href={allHref}
+            onClick={() => onOpenChange(false)}
+            className="flex items-center justify-between px-4 py-2 text-xs font-semibold uppercase tracking-wider text-boho-terracotta hover:bg-boho-sand-50 transition-colors"
+          >
+            <span>{allLabel}</span>
+            <span aria-hidden="true">→</span>
+          </Link>
+          {items.length > 0 && <div className="h-px bg-boho-sand-200 my-1" />}
+          <div className="max-h-64 overflow-y-auto">
+            {items.map((it) => (
+              <Link
+                key={it.key}
+                href={it.href}
+                onClick={() => onOpenChange(false)}
+                className="flex items-center space-x-2 px-4 py-2 text-sm text-boho-charcoal hover:bg-boho-sand-50 hover:text-boho-terracotta transition-colors"
+              >
+                {icon && <Sparkles className="w-3.5 h-3.5 text-boho-terracotta flex-shrink-0" />}
+                <span className="truncate">{it.label}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function Navbar({ categories = [], collections = [] }: NavbarProps) {
   const { openCart, totalItems } = useCart();
   const activeCategories = categories.filter((c) => c.isActive !== false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [collectionsDropdownOpen, setCollectionsDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [openMenu, setOpenMenu] = useState<'catalog' | 'collections' | null>(null);
+  const navRef = useRef<HTMLElement>(null);
 
-  // Close collections dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setCollectionsDropdownOpen(false);
+      if (navRef.current && !navRef.current.contains(event.target as Node)) {
+        setOpenMenu(null);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -88,80 +147,30 @@ export function Navbar({ categories = [], collections = [] }: NavbarProps) {
             </Link>
           </div>
 
-          {/* Desktop Navigation Links (Center, clean spacing, no wrapping) */}
-          <nav className="hidden lg:flex items-center space-x-5 xl:space-x-7 whitespace-nowrap">
-            <Link
-              href="/"
-              className="relative py-1 text-sm font-medium text-boho-charcoal hover:text-boho-terracotta transition-colors after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-0 hover:after:w-full after:bg-boho-terracotta after:transition-all after:duration-300"
-            >
-              Inicio
+          {/* Desktop Navigation: Catálogo ▾ (categorías) · Colecciones ▾ · Talleres · Contacto */}
+          <nav ref={navRef} className="hidden lg:flex items-center space-x-6 xl:space-x-8 whitespace-nowrap">
+            <NavDropdown
+              label="Catálogo"
+              open={openMenu === 'catalog'}
+              onOpenChange={(o) => setOpenMenu(o ? 'catalog' : null)}
+              allHref="/catalogo"
+              allLabel="Ver todo el catálogo"
+              items={activeCategories.map((c) => ({ key: c.id, href: `/categorias/${c.slug}`, label: c.name }))}
+            />
+            <NavDropdown
+              label="Colecciones"
+              open={openMenu === 'collections'}
+              onOpenChange={(o) => setOpenMenu(o ? 'collections' : null)}
+              allHref="/colecciones"
+              allLabel="Ver todas las colecciones"
+              items={collections.map((c) => ({ key: c.slug, href: `/colecciones/${c.slug}`, label: c.name }))}
+              icon
+            />
+            <Link href="/talleres" className={NAV_LINK}>
+              Talleres
             </Link>
-            <Link
-              href="/catalogo"
-              className="relative py-1 text-sm font-medium text-boho-charcoal hover:text-boho-terracotta transition-colors after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-0 hover:after:w-full after:bg-boho-terracotta after:transition-all after:duration-300"
-            >
-              Catálogo
-            </Link>
-            {activeCategories.slice(0, 4).map((cat) => (
-              <Link
-                key={cat.id}
-                href={`/categorias/${cat.slug}`}
-                className="relative py-1 text-sm font-medium text-boho-charcoal hover:text-boho-terracotta transition-colors after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-0 hover:after:w-full after:bg-boho-terracotta after:transition-all after:duration-300"
-              >
-                {cat.name}
-              </Link>
-            ))}
-
-            {/* Colecciones Dropdown */}
-            <div
-              ref={dropdownRef}
-              className="relative"
-              onMouseEnter={() => setCollectionsDropdownOpen(true)}
-              onMouseLeave={() => setCollectionsDropdownOpen(false)}
-            >
-              <button
-                type="button"
-                onClick={() => setCollectionsDropdownOpen(!collectionsDropdownOpen)}
-                className="inline-flex items-center space-x-1 py-1 text-sm font-medium text-boho-charcoal hover:text-boho-terracotta transition-colors"
-                aria-expanded={collectionsDropdownOpen}
-              >
-                <span>Colecciones</span>
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${collectionsDropdownOpen ? 'rotate-180 text-boho-terracotta' : 'text-boho-charcoal-muted'}`} />
-              </button>
-
-              {collectionsDropdownOpen && (
-                <div className="absolute top-full left-0 mt-1 w-60 bg-white rounded-xl shadow-xl border border-boho-sand-300/80 py-2 z-50 animate-slide-down">
-                  <Link
-                    href="/colecciones"
-                    onClick={() => setCollectionsDropdownOpen(false)}
-                    className="flex items-center justify-between px-4 py-2 text-xs font-semibold uppercase tracking-wider text-boho-terracotta hover:bg-boho-sand-50 transition-colors"
-                  >
-                    <span>Ver todas las colecciones</span>
-                    <span aria-hidden="true">→</span>
-                  </Link>
-                  {collections.length > 0 && <div className="h-px bg-boho-sand-200 my-1" />}
-                  <div className="max-h-64 overflow-y-auto">
-                    {collections.map((c) => (
-                      <Link
-                        key={c.slug}
-                        href={`/colecciones/${c.slug}`}
-                        onClick={() => setCollectionsDropdownOpen(false)}
-                        className="flex items-center space-x-2 px-4 py-2 text-sm text-boho-charcoal hover:bg-boho-sand-50 hover:text-boho-terracotta transition-colors"
-                      >
-                        <Sparkles className="w-3.5 h-3.5 text-boho-terracotta flex-shrink-0" />
-                        <span className="truncate">{c.name}</span>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <Link
-              href="/sobre-nosotros"
-              className="relative py-1 text-sm font-medium text-boho-charcoal hover:text-boho-terracotta transition-colors after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-0 hover:after:w-full after:bg-boho-terracotta after:transition-all after:duration-300"
-            >
-              Sobre Nosotros
+            <Link href="/contacto" className={NAV_LINK}>
+              Contacto
             </Link>
           </nav>
 
@@ -276,6 +285,21 @@ export function Navbar({ categories = [], collections = [] }: NavbarProps) {
               ))}
             </div>
 
+            <Link
+              href="/talleres"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block px-3 py-2 text-base font-medium text-boho-charcoal hover:bg-boho-sand-50 rounded-md"
+            >
+              Talleres
+            </Link>
+            <Link
+              href="/contacto"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block px-3 py-2 text-base font-medium text-boho-charcoal hover:bg-boho-sand-50 rounded-md"
+            >
+              Contacto
+            </Link>
+
             <div className="pt-3 border-t border-boho-sand-200">
               <Link
                 href="/sobre-nosotros"
@@ -290,13 +314,6 @@ export function Navbar({ categories = [], collections = [] }: NavbarProps) {
                 className="block px-3 py-2 text-sm text-boho-charcoal hover:text-boho-terracotta"
               >
                 Preguntas Frecuentes & Envíos
-              </Link>
-              <Link
-                href="/contacto"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-2 text-sm text-boho-charcoal hover:text-boho-terracotta"
-              >
-                Contacto
               </Link>
             </div>
           </div>

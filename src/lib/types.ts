@@ -122,6 +122,8 @@ export interface Collection {
   tagline?: string | null;
   description?: string | null;
   heroImage?: string | null;
+  /** Hero image, or the first active product image as a fallback (public listings). */
+  coverImage?: string | null;
   accentColor: string;
   startsAt?: string | null; // original configured dates (ISO)
   endsAt?: string | null;

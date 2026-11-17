@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { HeroBanner } from '@/components/store/HeroBanner';
 import { CollectionSpotlight } from '@/components/store/CollectionSpotlight';
+import { CollectionsShowcase } from '@/components/store/CollectionsShowcase';
 import { FeaturedCategories } from '@/components/store/FeaturedCategories';
 import { ProductGrid } from '@/components/store/ProductGrid';
 import { CraftsmanshipSection } from '@/components/store/CraftsmanshipSection';
@@ -18,6 +19,9 @@ export default async function HomePage() {
   const allProducts = await storeService.getProducts();
   const reviews = await storeService.getReviews({ approvedOnly: true });
   const spotlight = await storeService.getHomeCollection();
+  const otherCollections = (await storeService.getCollections()).filter(
+    (c) => c.id !== spotlight?.id
+  );
 
   const imagePool = getProductImagePool(allProducts);
   const heroShowcaseImage = imagePool[0];
@@ -39,6 +43,11 @@ export default async function HomePage() {
 
       {/* Seasonal collection currently live (Feria, Halloween, Navidad...) */}
       {spotlight && <CollectionSpotlight collection={spotlight} />}
+
+      {/* Other live / upcoming collections */}
+      <ScrollReveal delay={100}>
+        <CollectionsShowcase collections={otherCollections} />
+      </ScrollReveal>
 
       {/* Featured Categories */}
       <ScrollReveal delay={100}>
