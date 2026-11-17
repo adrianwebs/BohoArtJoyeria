@@ -5,6 +5,7 @@ import { ProductsAdminClient } from './ProductsAdminClient';
 export default async function AdminProductsPage() {
   const products = await storeService.getProducts({ activeOnly: false });
   const categories = await storeService.getCategories({ activeOnly: false });
+  const attributeGroups = await storeService.getAttributeGroups();
 
   return (
     <div className="space-y-6">
@@ -19,7 +20,7 @@ export default async function AdminProductsPage() {
         </div>
       </div>
 
-      <ProductsAdminClient initialProducts={products} categories={categories} />
+      <ProductsAdminClient initialProducts={products} categories={categories} attributeGroups={attributeGroups} />
     </div>
   );
 }

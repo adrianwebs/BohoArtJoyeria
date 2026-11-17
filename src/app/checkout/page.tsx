@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ShieldCheck, Truck, ArrowLeft, Lock, Sparkles, CheckCircle2, Tag, X, AlertCircle } from 'lucide-react';
-import { useCart } from '@/lib/cartContext';
+import { useCart, cartLineKey, cartUnitPrice } from '@/lib/cartContext';
 import { formatPrice } from '@/lib/utils';
 
 export default function CheckoutPage() {
@@ -65,7 +65,7 @@ export default function CheckoutPage() {
     country: 'España',
     notes,
     couponCode: appliedCoupon?.code || null,
-    items: cart.map((item) => ({ productId: item.product.id, quantity: item.quantity })),
+    items: cart.map((item) => ({ productId: item.product.id, variantId: item.variant?.id ?? null, quantity: item.quantity })),
   };
 
   if (cart.length === 0) {
@@ -405,11 +405,11 @@ export default function CheckoutPage() {
             {/* Products preview */}
             <div className="space-y-3 divide-y divide-boho-sand-100 max-h-80 overflow-y-auto pr-1">
               {cart.map((item) => (
-                <div key={item.product.id} className="pt-3 first:pt-0 flex items-center justify-between gap-3">
+                <div key={cartLineKey(item)} className="pt-3 first:pt-0 flex items-center justify-between gap-3">
                   <div className="flex items-center space-x-3">
                     <div className="relative w-14 h-14 rounded-xl overflow-hidden bg-boho-sand-100 shrink-0 border border-boho-sand-200">
                       <Image
-                        src={item.product.images[0] || 'https://images.unsplash.com/photo-1630019852942-f89202989a59?w=800&auto=format&fit=crop&q=80'}
+                        src={item.variant?.image || item.product.images[0] || 'https://images.unsplash.com/photo-1630019852942-f89202989a59?w=800&auto=format&fit=crop&q=80'}
                         alt={item.product.name}
                         fill
                         className="object-cover"
@@ -419,14 +419,17 @@ export default function CheckoutPage() {
                       <h4 className="font-medium text-xs text-boho-charcoal line-clamp-1">
                         {item.product.name}
                       </h4>
+                      {item.variant && (
+                        <p className="text-[11px] font-medium text-boho-terracotta line-clamp-1">{item.variant.label}</p>
+                      )}
                       <p className="text-[11px] text-boho-charcoal-muted">
-                        Cant: {item.quantity} x {formatPrice(item.product.price)}
+                        Cant: {item.quantity} x {formatPrice(cartUnitPrice(item))}
                       </p>
                     </div>
                   </div>
 
                   <span className="font-bold text-xs text-boho-charcoal">
-                    {formatPrice(item.product.price * item.quantity)}
+                    {formatPrice(cartUnitPrice(item) * item.quantity)}
                   </span>
                 </div>
               ))}
