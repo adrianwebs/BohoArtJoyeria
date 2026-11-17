@@ -176,3 +176,55 @@ model Coupon {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 }
+
+// ---------------- Email marketing ----------------
+
+// Newsletter con doble opt-in (RGPD). status: PENDING | CONFIRMED | UNSUBSCRIBED
+model NewsletterSubscriber {
+  id             String    @id @default(uuid())
+  email          String    @unique
+  status         String    @default("PENDING")
+  token          String    @unique // sirve para confirmar y para darse de baja
+  source         String    @default("footer") // footer | popup | admin
+  couponCode     String?
+  createdAt      DateTime  @default(now())
+  confirmedAt    DateTime?
+  unsubscribedAt DateTime?
+}
+
+// Configuración (una sola fila) del pop-up de descuento
+model PopupSetting {
+  id              String  @id @default("popup-default")
+  isEnabled       Boolean @default(false)
+  title           String  @default("¡Te regalamos un 10% en tu primer pedido!")
+  message         String  @default("Suscríbete al Club Bohoart y te enviamos tu código de descuento por correo.") @db.NVarChar(Max)
+  discountPercent Int     @default(10)
+  delaySeconds    Int     @default(15)
+  exitIntent      Boolean @default(true)
+  couponValidDays Int     @default(30)
+}
+
+// Carrito guardado en servidor cuando se conoce el email (una fila por email)
+model AbandonedCart {
+  id             String    @id @default(uuid())
+  email          String    @unique
+  items          String    @db.NVarChar(Max) // JSON [{productId, quantity}]
+  total          Decimal   @default(0.00) @db.Decimal(10, 2)
+  token          String    @unique
+  remindersSent  Int       @default(0)
+  lastReminderAt DateTime?
+  orderedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+// Avisos "avísame cuando haya stock"
+model StockNotification {
+  id         String    @id @default(uuid())
+  productId  String
+  email      String
+  createdAt  DateTime  @default(now())
+  notifiedAt DateTime?
+
+  @@unique([productId, email])
+}

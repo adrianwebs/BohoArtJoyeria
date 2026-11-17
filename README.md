@@ -101,3 +101,27 @@ El proyecto incluye:
 - `docker-compose.yml` con servicio web y contenedor de Microsoft SQL Server 2022 Express.
 - `.github/workflows/deploy.yml` para despliegue continuo automatizado en tu VPS al hacer push a la rama `main`.
 - Carpeta `.agents/` con documentación de marca, esquemas SQL Server y arquitectura técnica.
+
+---
+
+## 📧 Email marketing
+
+Requiere SMTP configurado (`SMTP_*`, `MAIL_FROM` en `.env`). Sin SMTP los correos no se envían; fuera de producción se registran en la consola del servidor. Tras desplegar hay que aplicar el esquema (`npm run db:push`): añade las tablas `NewsletterSubscriber`, `PopupSetting`, `AbandonedCart` y `StockNotification`.
+
+- **Newsletter** (`/admin/newsletter`): alta desde el pie de página y el pop-up con doble opt-in (correo de confirmación → `/newsletter/confirmar`), baja con enlace en cada correo (`/newsletter/baja`), lista, exportación CSV y envío de campañas (asunto + HTML) a los confirmados en lotes de 20.
+- **Pop-up de descuento**: se configura en `/admin/newsletter` (activar, texto, %, segundos, intención de salida, validez). Sale una vez por visitante y nunca en `/admin`, `/checkout` ni `/mantenimiento`. El cupón de un solo uso (`BIENVENIDA-XXXXXX`) se crea y se envía al **confirmar** el correo.
+- **Avísame cuando haya stock**: formulario en productos agotados; al pasar el stock de 0 a >0 (admin o `PUT /api/products/:id`) se envía un único aviso.
+- **Carrito abandonado**: en el checkout, al escribir un email válido, el carrito se guarda en el servidor. Un cron llama a `/api/cron/abandoned-carts`, que envía un recordatorio tras `ABANDONED_CART_HOURS` (4 h) sin actividad y un segundo `ABANDONED_CART_SECOND_REMINDER_HOURS` (48 h) después como máximo. No se escribe a quien ya haya hecho un pedido.
+
+### Programar el recordatorio de carritos
+
+1. Define `CRON_SECRET` (mín. 16 caracteres, p. ej. `openssl rand -hex 24`) en el `.env` del servidor. Sin él el endpoint responde 503.
+2. Programa una llamada periódica (cada 30–60 min). Ejemplo con cron del VPS (`crontab -e`):
+
+   ```bash
+   */30 * * * * curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" http://127.0.0.1:3000/api/cron/abandoned-carts >> /var/log/bohoart-cron.log 2>&1
+   ```
+
+   Con Docker, desde el host: `docker compose exec -T web sh -c 'wget -qO- --post-data="" --header="Authorization: Bearer $CRON_SECRET" http://127.0.0.1:3000/api/cron/abandoned-carts'` (ajusta el nombre del servicio). Prueba manual en local: `curl -X POST -H "Authorization: Bearer <secreto>" http://localhost:3000/api/cron/abandoned-carts`.
+
+> Aviso legal: revisa la política de privacidad para incluir el tratamiento de newsletter, avisos de stock y recordatorios de carrito.

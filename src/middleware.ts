@@ -56,6 +56,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/api/auth') ||
     pathname.startsWith('/api/settings') ||
     pathname.startsWith('/api/my-ip') ||
+    pathname.startsWith('/api/cron') ||
     pathname.startsWith('/admin') ||
     pathname.startsWith('/login') ||
     pathname === '/logo.png' ||

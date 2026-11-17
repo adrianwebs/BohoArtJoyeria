@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from './prisma';
 import { Category, Product, Order, Review, StoreSetting, OrderStatus, Collection, Coupon, CouponValidationResult, DiscountType } from './types';
 import { resolveSchedule } from './collectionSchedule';
+import { markCartOrdered, notifyStockAvailable } from './marketing';
 
 const SETTINGS_ID = 'store-default';
 
@@ -407,11 +408,16 @@ export const storeService = {
 
   async updateProduct(id: string, data: Partial<Product>): Promise<Product | null> {
     try {
+      const before = data.stock !== undefined ? await prisma.product.findUnique({ where: { id }, select: { stock: true } }) : null;
       const p = await prisma.product.update({
         where: { id },
         data: productData(data),
         include: { category: true },
       });
+      // Back in stock (0 -> >0): email everyone who asked to be notified.
+      if (before && before.stock <= 0 && p.stock > 0) {
+        await notifyStockAvailable(p.id).catch((e) => console.error('notifyStockAvailable', e));
+      }
       return mapProduct(p, (await ratingsByProduct([p.id])).get(p.id));
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') return null;
@@ -591,6 +597,7 @@ export const storeService = {
           include: { items: true },
         });
       });
+      await markCartOrdered(data.customerEmail);
       return mapOrder(created);
     } catch (err) {
       if (err instanceof StoreError) throw err;

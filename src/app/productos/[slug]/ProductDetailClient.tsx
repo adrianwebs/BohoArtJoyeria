@@ -18,6 +18,7 @@ import {
 import { Product } from '@/lib/types';
 import { useCart } from '@/lib/cartContext';
 import { formatPrice } from '@/lib/utils';
+import { StockNotifyForm } from '@/components/marketing/StockNotifyForm';
 
 interface ProductDetailClientProps {
   product: Product;
@@ -170,6 +171,8 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             <span>Entrega estimada en 24-48 horas con número de seguimiento.</span>
           </div>
         </div>
+
+        {product.stock <= 0 && <StockNotifyForm productId={product.id} />}
 
         {/* Quantity and Add to Cart Button */}
         <div className="space-y-3 pt-2">

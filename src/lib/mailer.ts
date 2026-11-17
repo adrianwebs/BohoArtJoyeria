@@ -21,26 +21,43 @@ function getTransporter(): Transporter | null {
   return transporter;
 }
 
-const esc = (v: unknown) =>
+export const esc = (v: unknown) =>
   String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 
-/** Sends an email; never throws (a mail failure must not break an order). No-op when SMTP is not configured. */
-export async function sendMail(to: string | undefined | null, subject: string, html: string): Promise<void> {
+/**
+ * Sends an email; never throws (a mail failure must not break an order). Returns true when delivered.
+ * Without SMTP configured nothing is sent: outside production the message is logged to the console instead.
+ */
+export async function sendMail(
+  to: string | undefined | null,
+  subject: string,
+  html: string,
+  headers?: Record<string, string>
+): Promise<boolean> {
+  if (!to) return false;
   const t = getTransporter();
-  if (!t || !to) return;
+  if (!t) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[mail:dev] To: ${to} | Subject: ${subject}\n${html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()}`);
+    }
+    return false;
+  }
   try {
     await t.sendMail({
       from: process.env.MAIL_FROM || process.env.SMTP_USER || 'Bohoart Jewelry <no-reply@bohoartjoyeria.com>',
       to,
       subject,
       html,
+      headers,
     });
+    return true;
   } catch (err) {
     console.error('Error enviando email:', err);
+    return false;
   }
 }
 
-function layout(title: string, body: string): string {
+export function layout(title: string, body: string): string {
   return `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#3a3330;padding:24px">
   <h2 style="color:#b8583f;margin:0 0 12px">${esc(title)}</h2>${body}
   <p style="font-size:12px;color:#8a7f79;margin-top:28px">Bohoart Jewelry · Joyería artesanal hecha a mano</p></div>`;
